@@ -121,6 +121,7 @@ const register = async (body) => {
             } else {
                 const hash = bcrypt.hashSync(body.password, Number(process.env.SALT_ROUNDS));
                 body.password = hash
+                body.type = 'CLIENT'
                 let result = await mongodb.User.create(body);
                 apiResponse.data = result;
                 apiResponse.status = httpStatus.StatusCodes.OK

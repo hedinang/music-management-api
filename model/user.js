@@ -14,6 +14,7 @@ const userSchema = new Schema({
     username: String,
     password: String,
     balance: Number,
+    type: String,
     status: {
         type: String,
         index: true,
