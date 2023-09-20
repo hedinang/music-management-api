@@ -3,9 +3,12 @@ const mongoose = require('mongoose');
 const httpStatus = require('http-status-codes');
 const message = require('../config/message');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 
 const login = async (body) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     let apiResponse = {}
     try {
         if (body.username && body.password) {
@@ -14,26 +17,35 @@ const login = async (body) => {
                 const user = userList[0]
                 const result = bcrypt.compareSync(body.password, user.password); // true
                 if (result) {
-                    apiResponse.data = result;
+                    const accessToken = jwt.sign({ username: body.username }, process.env.TOKEN_SECRET, { expiresIn: '30d' });
+                    await mongodb.User.findOneAndUpdate({ id: user.id }, { access_token: accessToken }, { new: true, session });
+                    apiResponse.data = {
+                        access_token: accessToken
+                    };
                     apiResponse.status = httpStatus.StatusCodes.OK
+                    await session.commitTransaction();
 
                 } else {
                     apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                     apiResponse.message = message.BAD_REQUEST;
+                    await session.abortTransaction();
                 }
 
             } else {
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                 apiResponse.message = message.BAD_REQUEST;
+                await session.abortTransaction();
             }
 
         } else {
             apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
             apiResponse.message = message.BAD_REQUEST;
+            await session.abortTransaction();
         }
     } catch (e) {
         apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
         apiResponse.message = message.BAD_REQUEST;
+        await session.abortTransaction();
     }
     return apiResponse;
 }
@@ -65,6 +77,8 @@ const list = async (body) => {
 }
 
 const add = async (body) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     let apiResponse = {}
     try {
 
