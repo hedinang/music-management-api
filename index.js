@@ -5,13 +5,17 @@ const routerList = require('./routers/index');
 const bodyParser = require('body-parser');
 const _ = require('lodash');
 var app = express()
-app.set('port', process.env.PORT || 3000);
+app.set('port', process.env.PORT || 3100);
 global.logger = winston;
 
 
 // middleware or filter
 app.use((req, res, next) => {
-    console.log('LOGGED')
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header(
+        'Access-Control-Allow-Headers',
+        'Origin, X-Requested-With, Content-Type, Accept'
+    );
     next()
 })
 // in order to format body req
