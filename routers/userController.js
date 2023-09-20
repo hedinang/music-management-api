@@ -12,7 +12,7 @@ router.post('/login', async function (req, res) {
     res.send(result)
 })
 
-router.get('/', async function (req, res) {
+router.post('/list', async function (req, res) {
     let result = await userService.list(req.body);
     res.send(result)
 })
@@ -22,7 +22,7 @@ router.get('/:userId', async function (req, res) {
     res.send(result)
 })
 
-router.post('/', async function (req, res) {
+router.post('/add', async function (req, res) {
     let result = await userService.add(req.body);
     res.send(result)
 })

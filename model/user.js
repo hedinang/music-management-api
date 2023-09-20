@@ -11,6 +11,7 @@ const userSchema = new Schema({
         default: uuid.v4()
     },
     name: String,
+    email: String,
     username: String,
     password: String,
     balance: Number,
@@ -31,7 +32,7 @@ const userSchema = new Schema({
         index: true,
         default: new Date()
     },
-}, { timestamps: true }, { versionKey: false });
+}, { versionKey: false });
 const ApiSchema = mongoose.model(modelName, userSchema, modelName);
 
 module.exports = ApiSchema;

@@ -63,17 +63,33 @@ const get = async (userId) => {
 
 const list = async (body) => {
     let apiResponse = {}
-    if (!body.limit) body.limit = 10
-    if (!body.page) body.page = 1
-    const { limit, page, ...search } = body
-    let result = await mongodb.User.find({
-        ...search,
-        status: { $nin: ['REMOVED'] }
-    }).limit(limit).skip(page).sort({ _id: -1 }).lean();
 
-    apiResponse.data = result;
-    apiResponse.status = httpStatus.StatusCodes.OK
-    return apiResponse
+    try {
+
+        if (!body.limit) body.limit = 10
+        if (!body.page) body.page = 0
+        const { limit, page, ...search } = body
+        let result = await mongodb.User.find({
+            ...search,
+            status: { $nin: ['REMOVED'] }
+        }).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
+
+        apiResponse.data = result?.map(e => ({
+            id: e?.id,
+            name: e?.name,
+            email: e?.email,
+            username: e?.username,
+            balance: e?.balance,
+            status: e?.status,
+            createdAt: e?.created_at
+        }))
+        apiResponse.status = httpStatus.StatusCodes.OK
+        return apiResponse
+    } catch (error) {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = message.BAD_REQUEST;
+        return apiResponse
+    }
 }
 
 const add = async (body) => {
@@ -81,25 +97,25 @@ const add = async (body) => {
     session.startTransaction();
     let apiResponse = {}
     try {
-
-        if (body.password) {
-            const hash = bcrypt.hashSync(body.password, Number(process.env.SALT_ROUNDS));
-            body.password = hash
-            let result = await mongodb.User.create(body);
-            apiResponse.data = result;
-            apiResponse.status = httpStatus.StatusCodes.OK
-        } else {
-
-            apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-            apiResponse.message = message.BAD_REQUEST;
+        if (body.username && body.password) {
+            let user = await mongodb.User.find({ username: body.username }).lean();
+            if (user.length) {
+                apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+                apiResponse.message = "Tên đăng nhập này đã tồn tại!";
+            } else {
+                const hash = bcrypt.hashSync(body.password, Number(process.env.SALT_ROUNDS));
+                body.password = hash
+                let result = await mongodb.User.create(body);
+                apiResponse.data = result;
+                apiResponse.status = httpStatus.StatusCodes.OK
+            }
+            return apiResponse
         }
     } catch (e) {
         apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-        apiResponse.message = e;
+        apiResponse.message = message.BAD_REQUEST;
         return apiResponse
     }
-
-    return apiResponse
 }
 
 remove = async (userId) => {
@@ -135,6 +151,7 @@ const register = async (body) => {
             } else {
                 const hash = bcrypt.hashSync(body.password, Number(process.env.SALT_ROUNDS));
                 body.password = hash
+                body.balance = 0
                 body.type = 'CLIENT'
                 let result = await mongodb.User.create(body);
                 apiResponse.data = result;

@@ -4,14 +4,15 @@ const winston = require('./config/winston');
 const routerList = require('./routers/index');
 const bodyParser = require('body-parser');
 const _ = require('lodash');
+var cors = require('cors')
 var app = express()
 app.set('port', process.env.PORT || 3100);
 global.logger = winston;
 
-
+app.use(cors())
 // middleware or filter
 app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
+    // res.header('Access-Control-Allow-Origin', '*');
     res.header(
         'Access-Control-Allow-Headers',
         'Origin, X-Requested-With, Content-Type, Accept'
