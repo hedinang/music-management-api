@@ -1,3 +1,4 @@
 module.exports = [
-    { '/user': './routers/userController' }
+    { '/user': './routers/userController' },
+    { '/category': './routers/categoryController' }
 ]
