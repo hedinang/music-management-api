@@ -31,7 +31,12 @@ router.put('/update', upload.single('file'), async function (req, res) {
 })
 
 router.delete('/:categoryId', async function (req, res) {
-    let result = await categoryService.remove(req.params.userId);
+    let result = await categoryService.removeById(req.params.userId);
+    res.send(result)
+})
+
+router.post('/delete', async function (req, res) {
+    let result = await categoryService.remove(req.body);
     res.send(result)
 })
 

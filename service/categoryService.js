@@ -67,20 +67,22 @@ const add = async (body, file) => {
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                 apiResponse.message = "Tên danh mục này đã tồn tại!";
             } else {
-                const param = {
-                    Bucket: 'music2023',
-                    Key: `image/category/${uuid()}.${file.mimetype.split('/')[1]}`,
-                    Body: file.buffer
+                if (file) {
+                    const param = {
+                        Bucket: 'music2023',
+                        Key: `image/category/${uuid()}.${file.mimetype.split('/')[1]}`,
+                        Body: file.buffer
+                    }
+
+                    const uploaded = await s3.upload(param).promise()
+                    if (uploaded.Location) {
+                        body.img_url = uploaded.Location
+                    }
                 }
 
-                const uploaded = await s3.upload(param).promise()
-
-                if (uploaded.Location) {
-                    body.img_url = uploaded.Location
-                    let result = await mongodb.Category.create(body);
-                    apiResponse.data = result;
-                    apiResponse.status = httpStatus.StatusCodes.OK
-                }
+                let result = await mongodb.Category.create(body);
+                apiResponse.data = result;
+                apiResponse.status = httpStatus.StatusCodes.OK
             }
         }
 
@@ -96,14 +98,20 @@ const update = async (body, file) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     let apiResponse = {}
-    const { origin_url, ...data } = body
+    const { origin_url, name, ...data } = body
+    if (name === null || name.trim() === '') {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = message.BAD_REQUEST;
+        return apiResponse
+    }
+
     try {
         if (body.id) {
             let category = await mongodb.Category.find({ id: body.id }).lean();
             if (category.length) {
 
 
-                let categoryByName = await mongodb.Category.find({ name: body.name, id: { $ne: body.id } }).lean();
+                let categoryByName = await mongodb.Category.find({ name: name, id: { $ne: body.id } }).lean();
                 if (categoryByName.length) {
                     apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                     apiResponse.message = "Tên danh mục này đã tồn tại!";
@@ -113,17 +121,19 @@ const update = async (body, file) => {
                 if (origin_url.includes('https://music2023.s3')) {
                     data.img_url = origin_url
                 } else {
-                    const param = {
-                        Bucket: 'music2023',
-                        Key: `image/category/${uuid()}.${file.mimetype.split('/')[1]}`,
-                        Body: file.buffer
-                    }
+                    if (file) {
+                        const param = {
+                            Bucket: 'music2023',
+                            Key: `image/category/${uuid()}.${file.mimetype.split('/')[1]}`,
+                            Body: file.buffer
+                        }
 
-                    const uploaded = await s3.upload(param).promise()
-                    data.img_url = uploaded?.Location
+                        const uploaded = await s3.upload(param).promise()
+                        data.img_url = uploaded?.Location
+                    }
                 }
 
-                let result = await mongodb.Category.findOneAndUpdate({ id: body.id }, { ...data }, { new: true, session });
+                let result = await mongodb.Category.findOneAndUpdate({ id: body.id }, { name: name }, { ...data }, { new: true, session });
                 // apiResponse.data = result;
                 apiResponse.status = httpStatus.StatusCodes.OK
                 await session.commitTransaction();
@@ -137,7 +147,7 @@ const update = async (body, file) => {
     }
 }
 
-remove = async (categoryId) => {
+removeById = async (categoryId) => {
     let apiResponse = {}
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -158,10 +168,33 @@ remove = async (categoryId) => {
     return apiResponse
 }
 
+remove = async (idList) => {
+    let apiResponse = {}
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        if (!categoryId) {
+            throw Error("id hasn't existed !")
+        }
+
+        let result = await mongodb.Category.findOneAndUpdate({ id: { $in: idList } }, { status: 'REMOVED' }, { new: true, session });
+        apiResponse.data = result;
+        apiResponse.status = httpStatus.StatusCodes.OK
+        await session.commitTransaction();
+    } catch (error) {
+        await session.abortTransaction();
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = message.BAD_REQUEST;
+    }
+    return apiResponse
+}
+
+
 module.exports = {
     list,
     get,
     add,
     remove,
-    update
+    update,
+    removeById
 }
