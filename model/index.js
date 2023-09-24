@@ -94,6 +94,7 @@ const db = {};
 db.Types = mongoose.Types;
 db.User = require('./user');
 db.Category = require('./category');
+db.Song = require('./song');
 
 
 
