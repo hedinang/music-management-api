@@ -103,7 +103,8 @@ const add = async (body, img, audio) => {
                 if (img) {
                     const param = {
                         Bucket: 'music2023',
-                        Key: `image/song/${uuid()}.${img.mimetype.split('/')[1]}`,
+                        // Key: `image/song/${uuid()}.${img.mimetype.split('/')[1]}`,
+                        Key: `image/song/${uuid()}.m4a`,
                         Body: img.buffer
                     }
 
