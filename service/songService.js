@@ -4,6 +4,7 @@ const httpStatus = require('http-status-codes');
 const message = require('../config/message');
 var AWS = require('aws-sdk');
 const bcrypt = require('bcrypt');
+const { forEach } = require('lodash');
 const uuid = require('uuid').v4
 
 AWS.config.update({
@@ -20,7 +21,19 @@ const get = async (songId) => {
         status: { $nin: ['REMOVED'] }
     }).lean();
     if (result.length) {
-        apiResponse.data = result[0];
+        const song = result[0]
+        if (song.category.length) {
+            let categoryList = await mongodb.Category.find({
+                id: { $in: song.category },
+                status: { $nin: ['REMOVED'] }
+            }).lean();
+            song.category = categoryList.map(e => ({
+                id: e.id,
+                name: e.name
+            }))
+        }
+
+        apiResponse.data = song;
     }
 
     apiResponse.status = httpStatus.StatusCodes.OK
@@ -43,20 +56,28 @@ const list = async (body) => {
             ...search,
             status: { $nin: ['REMOVED'] }
         });
-
         apiResponse.data = {}
+        apiResponse.data.items = []
+        for (const e of result) {
+            const item = {
+                id: e?.id,
+                name: e?.name,
+                author: e?.author,
+                img_url: e?.img_url,
+                unit_price: e?.unit_price,
+                duration: e?.duration,
+                audio_url: e?.audio_url,
+                status: e?.status,
+                createdAt: e?.created_at
+            }
+            const categoryList = await mongodb.Category.find({
+                id: { $in: e?.category },
+                status: { $nin: ['REMOVED'] }
+            }).lean()
+            item.category = categoryList.map(e => e.name)
+            apiResponse.data.items.push(item)
+        }
 
-        apiResponse.data.items = result?.map(e => ({
-            id: e?.id,
-            name: e?.name,
-            author: e?.author,
-            img_url: e?.img_url,
-            category: e?.category,
-            unit_price: e?.unit_price,
-            audio_url: e?.audio_url,
-            status: e?.status,
-            createdAt: e?.created_at
-        }))
         apiResponse.data.total_items = total_items
         apiResponse.status = httpStatus.StatusCodes.OK
         return apiResponse
