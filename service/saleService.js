@@ -4,7 +4,6 @@ const httpStatus = require('http-status-codes');
 const message = require('../config/message');
 var AWS = require('aws-sdk');
 const bcrypt = require('bcrypt');
-const { forEach } = require('lodash');
 const uuid = require('uuid').v4
 
 AWS.config.update({
@@ -14,26 +13,14 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-const get = async (songId) => {
+const get = async (categoryId) => {
     let apiResponse = {}
-    let result = await mongodb.Song.find({
-        id: songId,
+    let result = await mongodb.Category.find({
+        id: categoryId,
         status: { $nin: ['REMOVED'] }
     }).lean();
     if (result.length) {
-        const song = result[0]
-        if (song.category.length) {
-            let categoryList = await mongodb.Category.find({
-                id: { $in: song.category },
-                status: { $nin: ['REMOVED'] }
-            }).lean();
-            song.category = categoryList.map(e => ({
-                id: e.id,
-                name: e.name
-            }))
-        }
-
-        apiResponse.data = song;
+        apiResponse.data = result[0];
     }
 
     apiResponse.status = httpStatus.StatusCodes.OK
@@ -47,37 +34,24 @@ const list = async (body) => {
         if (!body.limit) body.limit = 10
         if (!body.page) body.page = 0
         const { limit, page, ...search } = body
-        let result = await mongodb.Song.find({
+        let result = await mongodb.Category.find({
             ...search,
             status: { $nin: ['REMOVED'] }
         }).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
 
-        const total_items = await mongodb.Song.count({
+        const total_items =  await mongodb.Category.count({
             ...search,
             status: { $nin: ['REMOVED'] }
         });
-        apiResponse.data = {}
-        apiResponse.data.items = []
-        for (const e of result) {
-            const item = {
-                id: e?.id,
-                name: e?.name,
-                author: e?.author,
-                img_url: e?.img_url,
-                unit_price: e?.unit_price,
-                duration: e?.duration,
-                audio_url: e?.audio_url,
-                status: e?.status,
-                createdAt: e?.created_at
-            }
-            const categoryList = await mongodb.Category.find({
-                id: { $in: e?.category },
-                status: { $nin: ['REMOVED'] }
-            }).lean()
-            item.category = categoryList.map(e => e.name)
-            apiResponse.data.items.push(item)
-        }
 
+        apiResponse.data = {}
+        apiResponse.data.items = result?.map(e => ({
+            id: e?.id,
+            name: e?.name,
+            img_url: e?.img_url,
+            status: e?.status,
+            createdAt: e?.created_at
+        }))
         apiResponse.data.total_items = total_items
         apiResponse.status = httpStatus.StatusCodes.OK
         return apiResponse
@@ -88,47 +62,32 @@ const list = async (body) => {
     }
 }
 
-const add = async (body, img, audio) => {
+const add = async (body, file) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     let apiResponse = {}
     try {
         if (body.name) {
 
-            let song = await mongodb.Song.find({ name: body.name }).lean();
-            if (song.length) {
+            let category = await mongodb.Category.find({ name: body.name }).lean();
+            if (category.length) {
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                 apiResponse.message = "Tên danh mục này đã tồn tại!";
             } else {
-                if (img) {
-                    const imgPieces = img.originalname.split('.')
+                if (file) {
                     const param = {
                         Bucket: 'music2023',
-                        Key: `image/song/${uuid()}.${imgPieces[imgPieces.length - 1]}`,
-                        Body: img.buffer
+                        Key: `image/category/${uuid()}.${file.mimetype.split('/')[1]}`,
+                        Body: file.buffer
                     }
 
-                    const uploadedImg = await s3.upload(param).promise()
-                    if (uploadedImg.Location) {
-                        body.img_url = uploadedImg.Location
+                    const uploaded = await s3.upload(param).promise()
+                    if (uploaded.Location) {
+                        body.img_url = uploaded.Location
                     }
                 }
 
-                if (audio) {
-                    audioPieces = audio.originalname.split('.')
-                    const param = {
-                        Bucket: 'music2023',
-                        Key: `song/${uuid()}.${audioPieces[audioPieces.length - 1]}`,
-                        Body: audio.buffer
-                    }
-
-                    const uploadedAudio = await s3.upload(param).promise()
-                    if (uploadedAudio.Location) {
-                        body.audio_url = uploadedAudio.Location
-                    }
-                }
-
-                let result = await mongodb.Song.create(body);
+                let result = await mongodb.Category.create(body);
                 apiResponse.data = result;
                 apiResponse.status = httpStatus.StatusCodes.OK
             }
@@ -155,12 +114,12 @@ const update = async (body, file) => {
 
     try {
         if (body.id) {
-            let song = await mongodb.Song.find({ id: body.id }).lean();
-            if (song.length) {
+            let category = await mongodb.Category.find({ id: body.id }).lean();
+            if (category.length) {
 
 
-                let songByName = await mongodb.Song.find({ name: name, id: { $ne: body.id } }).lean();
-                if (songByName.length) {
+                let categoryByName = await mongodb.Category.find({ name: name, id: { $ne: body.id } }).lean();
+                if (categoryByName.length) {
                     apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                     apiResponse.message = "Tên danh mục này đã tồn tại!";
                     return apiResponse
@@ -172,7 +131,7 @@ const update = async (body, file) => {
                     if (file) {
                         const param = {
                             Bucket: 'music2023',
-                            Key: `image/song/${uuid()}.${file.mimetype.split('/')[1]}`,
+                            Key: `image/category/${uuid()}.${file.mimetype.split('/')[1]}`,
                             Body: file.buffer
                         }
 
@@ -181,7 +140,7 @@ const update = async (body, file) => {
                     }
                 }
 
-                let result = await mongodb.Song.findOneAndUpdate({ id: body.id }, { name: name }, { ...data }, { new: true, session });
+                let result = await mongodb.Category.findOneAndUpdate({ id: body.id }, { name: name }, { ...data }, { new: true, session });
                 // apiResponse.data = result;
                 apiResponse.status = httpStatus.StatusCodes.OK
                 await session.commitTransaction();
@@ -195,16 +154,16 @@ const update = async (body, file) => {
     }
 }
 
-removeById = async (songId) => {
+removeById = async (categoryId) => {
     let apiResponse = {}
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        if (!songId) {
+        if (!categoryId) {
             throw Error("id hasn't existed !")
         }
 
-        let result = await mongodb.Song.findOneAndUpdate({ id: songId }, { status: 'REMOVED' }, { new: true, session });
+        let result = await mongodb.Category.findOneAndUpdate({ id: categoryId }, { status: 'REMOVED' }, { new: true, session });
         apiResponse.data = result;
         apiResponse.status = httpStatus.StatusCodes.OK
         await session.commitTransaction();
@@ -221,11 +180,11 @@ remove = async (idList) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        if (!songId) {
+        if (!categoryId) {
             throw Error("id hasn't existed !")
         }
 
-        let result = await mongodb.Song.findOneAndUpdate({ id: { $in: idList } }, { status: 'REMOVED' }, { new: true, session });
+        let result = await mongodb.Category.findOneAndUpdate({ id: { $in: idList } }, { status: 'REMOVED' }, { new: true, session });
         apiResponse.data = result;
         apiResponse.status = httpStatus.StatusCodes.OK
         await session.commitTransaction();
