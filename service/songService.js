@@ -63,10 +63,10 @@ const list = async (body) => {
                 id: e?.id,
                 name: e?.name,
                 author: e?.author,
-                img_url: e?.img_url,
+                image: e?.image,
                 unit_price: e?.unit_price,
                 duration: e?.duration,
-                audio_url: e?.audio_url,
+                url: e?.url,
                 status: e?.status,
                 createdAt: e?.created_at
             }
@@ -110,7 +110,7 @@ const add = async (body, img, audio) => {
 
                     const uploadedImg = await s3.upload(param).promise()
                     if (uploadedImg.Location) {
-                        body.img_url = uploadedImg.Location
+                        body.image = uploadedImg.Location
                     }
                 }
 
@@ -124,7 +124,7 @@ const add = async (body, img, audio) => {
 
                     const uploadedAudio = await s3.upload(param).promise()
                     if (uploadedAudio.Location) {
-                        body.audio_url = uploadedAudio.Location
+                        body.url = uploadedAudio.Location
                     }
                 }
 
@@ -167,7 +167,7 @@ const update = async (body, file) => {
                 }
 
                 if (origin_url.includes('https://music2023.s3')) {
-                    data.img_url = origin_url
+                    data.url = origin_url
                 } else {
                     if (file) {
                         const param = {
@@ -177,7 +177,7 @@ const update = async (body, file) => {
                         }
 
                         const uploaded = await s3.upload(param).promise()
-                        data.img_url = uploaded?.Location
+                        data.image = uploaded?.Location
                     }
                 }
 

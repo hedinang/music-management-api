@@ -18,8 +18,8 @@ const songSchema = new Schema({
         index: true,
         default: 0
     },
-    img_url: String,
-    audio_url: String,
+    image: String,
+    url: String,
     duration: Number,
     status: {
         type: String,
