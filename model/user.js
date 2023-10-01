@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-var uuid = require('node-uuid');
+const { v4: uuidv4 } = require('uuid');
+
 const modelName = 'user';
 
 const userSchema = new Schema({
@@ -8,7 +9,7 @@ const userSchema = new Schema({
         type: String,
         required: true,
         index: true,
-        default: uuid.v4()
+        default: () => uuid.v4()
     },
     name: String,
     email: String,

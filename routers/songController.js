@@ -21,11 +21,11 @@ router.get('/:songId', async function (req, res) {
 })
 
 router.post('/add', upload.fields([{
-    name: 'img', maxCount: 1
+    name: 'image', maxCount: 1
 }, {
-    name: 'audio', maxCount: 1
+    name: 'url', maxCount: 1
 }]), async function (req, res) {
-    let result = await songService.add(req.body, req.files.img[0], req.files.audio[0]);
+    let result = await songService.add(req.body, req.files.image[0], req.files.url[0]);
     res.send(result)
 })
 

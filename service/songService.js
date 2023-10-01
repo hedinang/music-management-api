@@ -4,7 +4,6 @@ const httpStatus = require('http-status-codes');
 const message = require('../config/message');
 var AWS = require('aws-sdk');
 const bcrypt = require('bcrypt');
-const { forEach } = require('lodash');
 const uuid = require('uuid').v4
 
 AWS.config.update({

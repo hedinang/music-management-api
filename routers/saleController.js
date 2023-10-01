@@ -1,8 +1,6 @@
 const express = require('express');
-const multer = require('multer')
 const saleService = require('../service/saleService')
 const router = express.Router();
-const storage = multer.memoryStorage()
 
 
 router.post('/list', async function (req, res) {
