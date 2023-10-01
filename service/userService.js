@@ -74,7 +74,14 @@ const list = async (body) => {
             status: { $nin: ['REMOVED'] }
         }).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
 
-        apiResponse.data = result?.map(e => ({
+        const total_items = await mongodb.User.count({
+            ...search,
+            status: { $nin: ['REMOVED'] }
+        })
+        apiResponse.data = {}
+        apiResponse.data.items = []
+
+        apiResponse.data.items = result?.map(e => ({
             id: e?.id,
             name: e?.name,
             email: e?.email,
@@ -83,6 +90,7 @@ const list = async (body) => {
             status: e?.status,
             createdAt: e?.created_at
         }))
+        apiResponse.data.total_items = total_items
         apiResponse.status = httpStatus.StatusCodes.OK
         return apiResponse
     } catch (error) {

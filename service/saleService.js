@@ -13,10 +13,10 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-const get = async (categoryId) => {
+const get = async (saleId) => {
     let apiResponse = {}
-    let result = await mongodb.Category.find({
-        id: categoryId,
+    let result = await mongodb.Sale.find({
+        id: saleId,
         status: { $nin: ['REMOVED'] }
     }).lean();
     if (result.length) {
@@ -32,26 +32,57 @@ const list = async (body) => {
 
     try {
         if (!body.limit) body.limit = 10
-        if (!body.page) body.page = 0
+        if (!body.page) body.page = 1
         const { limit, page, ...search } = body
-        let result = await mongodb.Category.find({
-            ...search,
-            status: { $nin: ['REMOVED'] }
-        }).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
+        const result = await mongodb.Sale.aggregate([{
+            $lookup:
+            {
+                from: "user",
+                localField: "customer_id",
+                foreignField: "id",
+                as: "customer"
+            }
 
-        const total_items =  await mongodb.Category.count({
-            ...search,
-            status: { $nin: ['REMOVED'] }
-        });
+        },
+        { $unwind: "$customer" },
+        {
+            $lookup:
+            {
+                from: "song",
+                localField: "song_id",
+                foreignField: "id",
+                as: "song"
+            }
+        },
+        { $unwind: "$song" },
+        {
+            $project: {
+                "customer.name": 1,
+                "customer.id": 1,
 
+                "song.id": 1,
+                "song.name": 1,
+                "song.author": 1,
+                "song.unit_price": 1,
+                "song.duration": 1,
+                "song.status": 1,
+                "song.created_at": 1,
+
+                "created_at": 1,
+                "status": 1
+            }
+        },
+        { $limit: limit },
+        { $skip: (page - 1) * limit },
+        { $sort: { _id: -1 } }
+        ])
+
+
+        const total_items = await mongodb.User.count({
+            ...search
+        })
         apiResponse.data = {}
-        apiResponse.data.items = result?.map(e => ({
-            id: e?.id,
-            name: e?.name,
-            img_url: e?.img_url,
-            status: e?.status,
-            createdAt: e?.created_at
-        }))
+        apiResponse.data.items = result
         apiResponse.data.total_items = total_items
         apiResponse.status = httpStatus.StatusCodes.OK
         return apiResponse
@@ -62,41 +93,59 @@ const list = async (body) => {
     }
 }
 
-const add = async (body, file) => {
+const add = async (body) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     let apiResponse = {}
     try {
-        if (body.name) {
-
-            let category = await mongodb.Category.find({ name: body.name }).lean();
-            if (category.length) {
+        if (body.customerId && body.songId) {
+            let song = await mongodb.Song.find({ id: body.songId }).lean();
+            if (!song.length) {
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-                apiResponse.message = "Tên danh mục này đã tồn tại!";
-            } else {
-                if (file) {
-                    const param = {
-                        Bucket: 'music2023',
-                        Key: `image/category/${uuid()}.${file.mimetype.split('/')[1]}`,
-                        Body: file.buffer
-                    }
-
-                    const uploaded = await s3.upload(param).promise()
-                    if (uploaded.Location) {
-                        body.img_url = uploaded.Location
-                    }
-                }
-
-                let result = await mongodb.Category.create(body);
-                apiResponse.data = result;
-                apiResponse.status = httpStatus.StatusCodes.OK
+                apiResponse.message = "Bài hát này không tồn tại!";
+                return apiResponse
             }
-        }
+            let customer = await mongodb.User.find({ id: body.customerId }).lean();
+            if (!customer.length) {
+                apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+                apiResponse.message = "Không tồn tại tài khoản này!";
+                return apiResponse
+            }
 
-        return apiResponse
+            let sale = await mongodb.Sale.find({ customer_id: body.customerId, song_id: body.songId }).lean();
+            const retention = customer[0]?.balance || 0 - song[0]?.unit_price || 0 * song[0]?.duration || 0
+            if (retention < 0) {
+                apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+                apiResponse.message = "Bạn không đủ tiền để mua bài hát này!";
+                return apiResponse
+            }
+
+            if (sale.length) {
+                apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+                apiResponse.message = "Bạn đã mua bài hát này!";
+                return apiResponse
+            }
+
+
+            let result = await mongodb.Sale.create({
+                customer_id: body.customerId,
+                song_id: body.songId
+            });
+
+            await mongodb.Song.findOneAndUpdate({ id: body.customer_id }, { balance: retention }, { new: true, session });
+            await session.commitTransaction();
+            apiResponse.data = result;
+            apiResponse.status = httpStatus.StatusCodes.OK
+            return apiResponse
+        } else {
+            apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+            apiResponse.message = message.BAD_REQUEST;
+            return apiResponse
+        }
     } catch (e) {
         apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
         apiResponse.message = message.BAD_REQUEST;
+        await session.commitTransaction();
         return apiResponse
     }
 }
@@ -114,12 +163,12 @@ const update = async (body, file) => {
 
     try {
         if (body.id) {
-            let category = await mongodb.Category.find({ id: body.id }).lean();
-            if (category.length) {
+            let sale = await mongodb.Sale.find({ id: body.id }).lean();
+            if (sale.length) {
 
 
-                let categoryByName = await mongodb.Category.find({ name: name, id: { $ne: body.id } }).lean();
-                if (categoryByName.length) {
+                let saleByName = await mongodb.Sale.find({ name: name, id: { $ne: body.id } }).lean();
+                if (saleByName.length) {
                     apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                     apiResponse.message = "Tên danh mục này đã tồn tại!";
                     return apiResponse
@@ -131,7 +180,7 @@ const update = async (body, file) => {
                     if (file) {
                         const param = {
                             Bucket: 'music2023',
-                            Key: `image/category/${uuid()}.${file.mimetype.split('/')[1]}`,
+                            Key: `image/sale/${uuid()}.${file.mimetype.split('/')[1]}`,
                             Body: file.buffer
                         }
 
@@ -140,7 +189,7 @@ const update = async (body, file) => {
                     }
                 }
 
-                let result = await mongodb.Category.findOneAndUpdate({ id: body.id }, { name: name }, { ...data }, { new: true, session });
+                let result = await mongodb.Sale.findOneAndUpdate({ id: body.id }, { name: name }, { ...data }, { new: true, session });
                 // apiResponse.data = result;
                 apiResponse.status = httpStatus.StatusCodes.OK
                 await session.commitTransaction();
@@ -154,16 +203,16 @@ const update = async (body, file) => {
     }
 }
 
-removeById = async (categoryId) => {
+removeById = async (saleId) => {
     let apiResponse = {}
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        if (!categoryId) {
+        if (!saleId) {
             throw Error("id hasn't existed !")
         }
 
-        let result = await mongodb.Category.findOneAndUpdate({ id: categoryId }, { status: 'REMOVED' }, { new: true, session });
+        let result = await mongodb.Sale.findOneAndUpdate({ id: saleId }, { status: 'REMOVED' }, { new: true, session });
         apiResponse.data = result;
         apiResponse.status = httpStatus.StatusCodes.OK
         await session.commitTransaction();
@@ -180,11 +229,11 @@ remove = async (idList) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        if (!categoryId) {
+        if (!saleId) {
             throw Error("id hasn't existed !")
         }
 
-        let result = await mongodb.Category.findOneAndUpdate({ id: { $in: idList } }, { status: 'REMOVED' }, { new: true, session });
+        let result = await mongodb.Sale.findOneAndUpdate({ id: { $in: idList } }, { status: 'REMOVED' }, { new: true, session });
         apiResponse.data = result;
         apiResponse.status = httpStatus.StatusCodes.OK
         await session.commitTransaction();
