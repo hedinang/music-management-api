@@ -13,10 +13,10 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-const get = async (saleId) => {
+const get = async (clickId) => {
     let apiResponse = {}
-    let result = await mongodb.Sale.find({
-        id: saleId,
+    let result = await mongodb.Click.find({
+        id: clickId,
         status: { $nin: ['REMOVED'] }
     }).lean();
     if (result.length) {
@@ -34,7 +34,7 @@ const list = async (body) => {
         if (!body.limit) body.limit = 10
         if (!body.page) body.page = 1
         const { limit, page, ...search } = body
-        const result = await mongodb.Sale.aggregate([{
+        const result = await mongodb.Click.aggregate([{
             $lookup:
             {
                 from: "user",
@@ -113,27 +113,11 @@ const add = async (body) => {
                 return apiResponse
             }
 
-            let sale = await mongodb.Sale.find({ customer_id: body.customerId, song_id: body.songId }).lean();
-            const retention = (customer[0]?.balance || 0) - (song[0]?.unit_price || 0) * (song[0]?.duration || 0)
-            if (retention < 0) {
-                apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-                apiResponse.message = "Bạn không đủ tiền để mua bài hát này!";
-                return apiResponse
-            }
-
-            if (sale.length) {
-                apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-                apiResponse.message = "Bạn đã mua bài hát này!";
-                return apiResponse
-            }
-
-
-            let result = await mongodb.Sale.create({
+            let result = await mongodb.Click.create({
                 customer_id: body.customerId,
                 song_id: body.songId
             });
 
-            await mongodb.User.findOneAndUpdate({ id: body.customerId }, { balance: retention }, { new: true, session });
             await session.commitTransaction();
             apiResponse.data = result;
             apiResponse.status = httpStatus.StatusCodes.OK
@@ -164,12 +148,12 @@ const update = async (body, file) => {
 
     try {
         if (body.id) {
-            let sale = await mongodb.Sale.find({ id: body.id }).lean();
-            if (sale.length) {
+            let click = await mongodb.Click.find({ id: body.id }).lean();
+            if (click.length) {
 
 
-                let saleByName = await mongodb.Sale.find({ name: name, id: { $ne: body.id } }).lean();
-                if (saleByName.length) {
+                let clickByName = await mongodb.Click.find({ name: name, id: { $ne: body.id } }).lean();
+                if (clickByName.length) {
                     apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                     apiResponse.message = "Tên danh mục này đã tồn tại!";
                     return apiResponse
@@ -181,7 +165,7 @@ const update = async (body, file) => {
                     if (file) {
                         const param = {
                             Bucket: 'music2023',
-                            Key: `image/sale/${uuid()}.${file.mimetype.split('/')[1]}`,
+                            Key: `image/click/${uuid()}.${file.mimetype.split('/')[1]}`,
                             Body: file.buffer
                         }
 
@@ -190,7 +174,7 @@ const update = async (body, file) => {
                     }
                 }
 
-                let result = await mongodb.Sale.findOneAndUpdate({ id: body.id }, { name: name }, { ...data }, { new: true, session });
+                let result = await mongodb.Click.findOneAndUpdate({ id: body.id }, { name: name }, { ...data }, { new: true, session });
                 // apiResponse.data = result;
                 apiResponse.status = httpStatus.StatusCodes.OK
                 await session.commitTransaction();
@@ -204,16 +188,16 @@ const update = async (body, file) => {
     }
 }
 
-removeById = async (saleId) => {
+const removeById = async (clickId) => {
     let apiResponse = {}
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        if (!saleId) {
+        if (!clickId) {
             throw Error("id hasn't existed !")
         }
 
-        let result = await mongodb.Sale.findOneAndUpdate({ id: saleId }, { status: 'REMOVED' }, { new: true, session });
+        let result = await mongodb.Click.findOneAndUpdate({ id: clickId }, { status: 'REMOVED' }, { new: true, session });
         apiResponse.data = result;
         apiResponse.status = httpStatus.StatusCodes.OK
         await session.commitTransaction();
@@ -225,16 +209,16 @@ removeById = async (saleId) => {
     return apiResponse
 }
 
-remove = async (idList) => {
+const remove = async (idList) => {
     let apiResponse = {}
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        if (!saleId) {
+        if (!clickId) {
             throw Error("id hasn't existed !")
         }
 
-        let result = await mongodb.Sale.findOneAndUpdate({ id: { $in: idList } }, { status: 'REMOVED' }, { new: true, session });
+        let result = await mongodb.Click.findOneAndUpdate({ id: { $in: idList } }, { status: 'REMOVED' }, { new: true, session });
         apiResponse.data = result;
         apiResponse.status = httpStatus.StatusCodes.OK
         await session.commitTransaction();
@@ -250,10 +234,10 @@ const getTop = async (body) => {
     let apiResponse = {}
     try {
         if (!body.top) body.top = 10
-        const result = await mongodb.Sale.aggregate([{
+        const result = await mongodb.Click.aggregate([{
             $group: { _id: "$song_id", count: { $sum: 1 } }
         },
-        { $sort: { "count": -1 } },
+        { $sort: { "customer_id": -1 } },
         { $limit: body.top },
         {
             $lookup: {
@@ -277,6 +261,7 @@ const getTop = async (body) => {
         return apiResponse
     }
 }
+
 
 module.exports = {
     list,

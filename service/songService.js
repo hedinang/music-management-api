@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const httpStatus = require('http-status-codes');
 const message = require('../config/message');
 var AWS = require('aws-sdk');
-const bcrypt = require('bcrypt');
+const clickService = require('../service/clickService')
 const uuid = require('uuid').v4
 
 AWS.config.update({
@@ -13,7 +13,7 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-const get = async (songId) => {
+const get = async (userId, songId) => {
     let apiResponse = {}
     let result = await mongodb.Song.find({
         id: songId,
@@ -30,6 +30,10 @@ const get = async (songId) => {
                 id: e.id,
                 name: e.name
             }))
+            await clickService.add({
+                customerId: userId,
+                songId: songId
+            });
         }
 
         apiResponse.data = song;

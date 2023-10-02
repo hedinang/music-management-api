@@ -1,13 +1,14 @@
 const express = require('express');
 const multer = require('multer')
-const songService = require('../service/songService')
+const songService = require('../service/songService');
+const authenticateService = require('../service/authenticateService');
 const router = express.Router();
 const storage = multer.memoryStorage()
 
 // const upload = multer({ dest: "upload/" })
 const upload = multer({
     storage: storage,
-    limits: { fieldSize: 100 * 1024 * 1024,  files: 2 }
+    limits: { fieldSize: 100 * 1024 * 1024, files: 2 }
 })
 
 router.post('/list', async function (req, res) {
@@ -15,8 +16,8 @@ router.post('/list', async function (req, res) {
     res.send(result)
 })
 
-router.get('/:songId', async function (req, res) {
-    let result = await songService.get(req.params.songId);
+router.get('/:songId', authenticateService.authenticate, async function (req, res) {
+    let result = await songService.get(req.params.userId, req.params.songId);
     res.send(result)
 })
 

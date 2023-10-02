@@ -33,4 +33,9 @@ router.post('/add', async function (req, res) {
 //     res.send(result)
 // })
 
+router.post('/top', async function (req, res) {
+    let result = await saleService.getTop(req.body);
+    res.send(result)
+})
+
 module.exports = router

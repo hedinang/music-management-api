@@ -154,7 +154,7 @@ const update = async (body, file) => {
     }
 }
 
-removeById = async (categoryId) => {
+const removeById = async (categoryId) => {
     let apiResponse = {}
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -175,7 +175,7 @@ removeById = async (categoryId) => {
     return apiResponse
 }
 
-remove = async (idList) => {
+const remove = async (idList) => {
     let apiResponse = {}
     const session = await mongoose.startSession();
     session.startTransaction();
