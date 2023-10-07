@@ -9,7 +9,7 @@ const userSchema = new Schema({
         type: String,
         required: true,
         index: true,
-        default: () => uuid.v4()
+        default: () => uuidv4()
     },
     name: String,
     email: String,
