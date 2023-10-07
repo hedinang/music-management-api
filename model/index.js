@@ -97,6 +97,7 @@ db.Category = require('./category');
 db.Song = require('./song');
 db.Sale = require('./sale');
 db.Click = require('./click');
+db.Author = require('./author');
 
 
 module.exports = db;

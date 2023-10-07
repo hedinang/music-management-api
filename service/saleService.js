@@ -34,48 +34,50 @@ const list = async (body) => {
         if (!body.limit) body.limit = 10
         if (!body.page) body.page = 1
         const { limit, page, ...search } = body
-        const result = await mongodb.Sale.aggregate([{
-            $lookup:
+        const result = await mongodb.Sale.aggregate([
+            { $match: { 'status': { $nin: ['REMOVED'] } } },
             {
-                from: "user",
-                localField: "customer_id",
-                foreignField: "id",
-                as: "customer"
-            }
+                $lookup:
+                {
+                    from: "user",
+                    localField: "customer_id",
+                    foreignField: "id",
+                    as: "customer"
+                }
 
-        },
-        { $unwind: "$customer" },
-        {
-            $lookup:
+            },
+            { $unwind: "$customer" },
             {
-                from: "song",
-                localField: "song_id",
-                foreignField: "id",
-                as: "song"
-            }
-        },
-        { $unwind: "$song" },
-        {
-            $project: {
-                "customer.name": 1,
-                "customer.id": 1,
+                $lookup:
+                {
+                    from: "song",
+                    localField: "song_id",
+                    foreignField: "id",
+                    as: "song"
+                }
+            },
+            { $unwind: "$song" },
+            {
+                $project: {
+                    "customer.name": 1,
+                    "customer.id": 1,
 
-                "song.id": 1,
-                "song.name": 1,
-                "song.author": 1,
-                "song.unit_price": 1,
-                "song.duration": 1,
-                "song.status": 1,
-                "song.created_at": 1,
+                    "song.id": 1,
+                    "song.name": 1,
+                    "song.author": 1,
+                    "song.unit_price": 1,
+                    "song.duration": 1,
+                    "song.status": 1,
+                    "song.created_at": 1,
 
-                "id": 1,
-                "created_at": 1,
-                "status": 1
-            }
-        },
-        { $limit: limit },
-        { $skip: (page - 1) * limit },
-        { $sort: { _id: -1 } }
+                    "id": 1,
+                    "created_at": 1,
+                    "status": 1
+                }
+            },
+            { $limit: limit },
+            { $skip: (page - 1) * limit },
+            { $sort: { _id: -1 } }
         ])
 
 
@@ -204,7 +206,7 @@ const update = async (body, file) => {
     }
 }
 
-removeById = async (saleId) => {
+const removeById = async (saleId) => {
     let apiResponse = {}
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -225,16 +227,18 @@ removeById = async (saleId) => {
     return apiResponse
 }
 
-remove = async (idList) => {
+const remove = async (idList) => {
     let apiResponse = {}
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        if (!saleId) {
-            throw Error("id hasn't existed !")
+        if (!idList.length) {
+            apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+            apiResponse.message = "Have to contain at least 1 id!"
+            return apiResponse
         }
 
-        let result = await mongodb.Sale.findOneAndUpdate({ id: { $in: idList } }, { status: 'REMOVED' }, { new: true, session });
+        let result = await mongodb.Sale.updateMany({ id: { $in: idList } }, { $set: { status: 'REMOVED' } }, { new: true, session });
         apiResponse.data = result;
         apiResponse.status = httpStatus.StatusCodes.OK
         await session.commitTransaction();

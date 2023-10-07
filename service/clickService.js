@@ -247,7 +247,8 @@ const getTop = async (body) => {
                 as: "song"
             }
         },
-        { $unwind: "$song" }
+        { $unwind: "$song" },
+        { $match: { 'song.status': { $nin: ['REMOVED'] } } },
         ])
 
         apiResponse.data = {}

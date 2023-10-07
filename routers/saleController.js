@@ -23,15 +23,15 @@ router.post('/add', async function (req, res) {
 //     res.send(result)
 // })
 
-// router.delete('/:saleId', async function (req, res) {
-//     let result = await saleService.removeById(req.params.userId);
-//     res.send(result)
-// })
+router.delete('/:saleId', async function (req, res) {
+    let result = await saleService.removeById(req.params.userId);
+    res.send(result)
+})
 
-// router.post('/delete', async function (req, res) {
-//     let result = await saleService.remove(req.body);
-//     res.send(result)
-// })
+router.post('/delete', async function (req, res) {
+    let result = await saleService.remove(req.body);
+    res.send(result)
+})
 
 router.post('/top', async function (req, res) {
     let result = await saleService.getTop(req.body);
