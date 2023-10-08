@@ -8,27 +8,36 @@ const storage = multer.memoryStorage()
 // const upload = multer({ dest: "upload/" })
 const upload = multer({
     storage: storage,
-    limits: { fieldSize: 100 * 1024 * 1024, files: 2 }
+    limits: { fieldSize: 100 * 1024 * 1024, files: 3 }
 })
 
-router.post('/list', async function (req, res) {
-    let result = await songService.list(req.body);
+router.post('/list', authenticateService.authenticate, async function (req, res) {
+    let result = await songService.listByUser(req.body, req.params.userId);
+    res.send(result)
+})
+
+router.post('/admin/list', async function (req, res) {
+    let result = await songService.list(req.body, req.params.userId);
+    res.send(result)
+})
+
+router.get('/admin/:songId', async function (req, res) {
+    let result = await songService.get(req.params.songId);
     res.send(result)
 })
 
 router.get('/:songId', authenticateService.authenticate, async function (req, res) {
-    let result = await songService.get(req.params.userId, req.params.songId);
+    let result = await songService.getByUser(req.params.userId, req.params.songId);
     res.send(result)
 })
 
-router.post('/add', upload.fields([{
-    name: 'image', maxCount: 1
-}, {
-    name: 'url', maxCount: 1
-}]), async function (req, res) {
-    let result = await songService.add(req.body, req.files.image[0], req.files.url[0]);
-    res.send(result)
-})
+router.post('/add', upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'short_url', maxCount: 1 },
+    { name: 'full_url', maxCount: 1 }]), async function (req, res) {
+        let result = await songService.add(req.body, req.files.image[0], req.files.short_url[0], req.files.full_url[0]);
+        res.send(result)
+    })
 
 router.put('/update', upload.single('file'), async function (req, res) {
     let result = await songService.update(req.body, req.file);

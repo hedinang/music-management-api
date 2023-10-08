@@ -4,7 +4,7 @@ const httpStatus = require('http-status-codes');
 const message = require('../config/message');
 var AWS = require('aws-sdk');
 const bcrypt = require('bcrypt');
-const uuid = require('uuid').v4
+const { v4: uuidv4 } = require('uuid');
 
 AWS.config.update({
     accessKeyId: process.env.AWS_ACCESS_KEY,
@@ -77,7 +77,7 @@ const add = async (body, file) => {
                 if (file) {
                     const param = {
                         Bucket: 'music2023',
-                        Key: `image/author/${uuid()}.${file.mimetype.split('/')[1]}`,
+                        Key: `image/author/${uuidv4()}.${file.mimetype.split('/')[1]}`,
                         Body: file.buffer
                     }
 
@@ -131,7 +131,7 @@ const update = async (body, file) => {
                     if (file) {
                         const param = {
                             Bucket: 'music2023',
-                            Key: `image/author/${uuid()}.${file.mimetype.split('/')[1]}`,
+                            Key: `image/author/${uuidv4()}.${file.mimetype.split('/')[1]}`,
                             Body: file.buffer
                         }
 

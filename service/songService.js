@@ -13,30 +13,91 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-const get = async (userId, songId) => {
+const get = async (songId) => {
     let apiResponse = {}
-    let result = await mongodb.Song.find({
-        id: songId,
-        status: { $nin: ['REMOVED'] }
-    }).lean();
+    let result = await mongodb.Song.aggregate(
+        [
+            { $match: { id: songId, status: { $nin: ['REMOVED'] } } },
+            { $unwind: "$category" },
+            {
+                $lookup: {
+                    from: "category",
+                    localField: "category",
+                    foreignField: "id",
+                    as: "category"
+                }
+            },
+            { $unwind: '$category' },
+            {
+                $group: {
+                    "_id": "$_id",
+                    "name": { $first: '$name' },
+                    "author": { $first: '$author' },
+                    "image": { $first: '$image' },
+                    "unit_price": { $first: '$unit_price' },
+                    "duration": { $first: '$duration' },
+                    "full_url": { $first: '$full_url' },
+                    "short_url": { $first: '$short_url' },
+                    "status": { $first: '$status' },
+                    "created_at": { $first: '$created_at' },
+                    category: { $push: "$category" }
+                }
+            }
+        ]
+    )
     if (result.length) {
-        const song = result[0]
-        if (song.category.length) {
-            let categoryList = await mongodb.Category.find({
-                id: { $in: song.category },
-                status: { $nin: ['REMOVED'] }
-            }).lean();
-            song.category = categoryList.map(e => ({
-                id: e.id,
-                name: e.name
-            }))
-            await clickService.add({
-                customerId: userId,
-                songId: songId
-            });
-        }
+        apiResponse.data = result[0];
+    }
 
-        apiResponse.data = song;
+    apiResponse.status = httpStatus.StatusCodes.OK
+    return apiResponse
+}
+
+const getByUser = async (userId, songId) => {
+    let apiResponse = {}
+    let sale = await mongodb.Sale.find({ customer_id: userId, song_id: songId }).lean()
+    if (!sale.length) {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = 'Bạn chưa mua bài hát này!';
+        return apiResponse
+    }
+
+    let result = await mongodb.Song.aggregate(
+        [
+            { $match: { id: songId, status: { $nin: ['REMOVED'] } } },
+            { $unwind: "$category" },
+            {
+                $lookup: {
+                    from: "category",
+                    localField: "category",
+                    foreignField: "id",
+                    as: "category"
+                }
+            },
+            { $unwind: '$category' },
+            {
+                $group: {
+                    "_id": "$_id",
+                    "name": { $first: '$name' },
+                    "author": { $first: '$author' },
+                    "image": { $first: '$image' },
+                    "unit_price": { $first: '$unit_price' },
+                    "duration": { $first: '$duration' },
+                    "full_url": { $first: '$full_url' },
+                    "short_url": { $first: '$short_url' },
+                    "status": { $first: '$status' },
+                    "created_at": { $first: '$created_at' },
+                    category: { $push: "$category" }
+                }
+            }
+        ]
+    )
+    if (result.length) {
+        await clickService.add({
+            customerId: userId,
+            songId: songId
+        });
+        apiResponse.data = result[0];
     }
 
     apiResponse.status = httpStatus.StatusCodes.OK
@@ -50,10 +111,94 @@ const list = async (body) => {
         if (!body.limit) body.limit = 10
         if (!body.page) body.page = 0
         const { limit, page, ...search } = body
-        let result = await mongodb.Song.find({
+        let result = await mongodb.Song.aggregate([
+            { $match: { status: { $nin: ['REMOVED'] } } },
+            { $limit: limit },
+            { $skip: (page - 1) * limit },
+            { $sort: { _id: - 1 } },
+            { $unwind: "$category" },
+            {
+                $lookup: {
+                    from: "category",
+                    localField: "category",
+                    foreignField: "id",
+                    as: "category"
+                }
+            },
+            { $unwind: '$category' },
+            {
+                $group: {
+                    "_id": "$_id",
+                    'id': { $first: '$id' },
+                    "name": { $first: '$name' },
+                    "author": { $first: '$author' },
+                    "image": { $first: '$image' },
+                    "unit_price": { $first: '$unit_price' },
+                    "duration": { $first: '$duration' },
+                    "full_url": { $first: '$full_url' },
+                    "short_url": { $first: '$short_url' },
+                    "status": { $first: '$status' },
+                    "created_at": { $first: '$created_at' },
+                    category: { $push: "$category" }
+                }
+            }
+        ])
+
+        const total_items = await mongodb.Song.count({
             ...search,
             status: { $nin: ['REMOVED'] }
-        }).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
+        });
+        apiResponse.data = {}
+        apiResponse.data.items = result
+        apiResponse.data.total_items = total_items
+        apiResponse.status = httpStatus.StatusCodes.OK
+        return apiResponse
+    } catch (error) {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = message.BAD_REQUEST;
+        return apiResponse
+    }
+}
+
+const listByUser = async (body, userId) => {
+    let apiResponse = {}
+
+    try {
+        if (!body.limit) body.limit = 10
+        if (!body.page) body.page = 0
+        const { limit, page, ...search } = body
+        let result = await mongodb.Song.aggregate([
+            { $match: { status: { $nin: ['REMOVED'] } } },
+            { $limit: limit },
+            { $skip: (page - 1) * limit },
+            { $sort: { _id: - 1 } },
+            { $unwind: "$category" },
+            {
+                $lookup: {
+                    from: "category",
+                    localField: "category",
+                    foreignField: "id",
+                    as: "category"
+                }
+            },
+            { $unwind: '$category' },
+            {
+                $group: {
+                    "_id": "$_id",
+                    'id': { $first: '$id' },
+                    "name": { $first: '$name' },
+                    "author": { $first: '$author' },
+                    "image": { $first: '$image' },
+                    "unit_price": { $first: '$unit_price' },
+                    "duration": { $first: '$duration' },
+                    "full_url": { $first: '$full_url' },
+                    "short_url": { $first: '$short_url' },
+                    "status": { $first: '$status' },
+                    "created_at": { $first: '$created_at' },
+                    category: { $push: "$category" }
+                }
+            }
+        ])
 
         const total_items = await mongodb.Song.count({
             ...search,
@@ -69,15 +214,24 @@ const list = async (body) => {
                 image: e?.image,
                 unit_price: e?.unit_price,
                 duration: e?.duration,
-                url: e?.url,
+                short_url: e?.short_url,
+                full_url: e?.full_url,
                 status: e?.status,
-                createdAt: e?.created_at
+                created_at: e?.created_at,
+                category: e?.category
             }
-            const categoryList = await mongodb.Category.find({
-                id: { $in: e?.category },
+            const saleList = await mongodb.Sale.find({
+                customer_id: userId,
+                song_id: e.id,
                 status: { $nin: ['REMOVED'] }
             }).lean()
-            item.category = categoryList.map(e => e.name)
+
+            if (saleList.length) {
+                item.buy = true
+            } else {
+                item.buy = false
+            }
+
             apiResponse.data.items.push(item)
         }
 
@@ -91,7 +245,8 @@ const list = async (body) => {
     }
 }
 
-const add = async (body, img, audio) => {
+
+const add = async (body, img, shortAudio, fullAudio) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     let apiResponse = {}
@@ -117,19 +272,34 @@ const add = async (body, img, audio) => {
                     }
                 }
 
-                if (audio) {
-                    audioPieces = audio.originalname.split('.')
+                if (shortAudio) {
+                    const shortaudioPieces = shortAudio.originalname.split('.')
                     const param = {
                         Bucket: 'music2023',
-                        Key: `song/${uuid()}.${audioPieces[audioPieces.length - 1]}`,
-                        Body: audio.buffer
+                        Key: `song/short/${uuid()}.${shortaudioPieces[shortaudioPieces.length - 1]}`,
+                        Body: shortAudio.buffer
                     }
 
-                    const uploadedAudio = await s3.upload(param).promise()
-                    if (uploadedAudio.Location) {
-                        body.url = uploadedAudio.Location
+                    const uploadedShortAudio = await s3.upload(param).promise()
+                    if (uploadedShortAudio.Location) {
+                        body.short_url = uploadedShortAudio.Location
                     }
                 }
+
+                if (fullAudio) {
+                    const fullAudioPieces = fullAudio.originalname.split('.')
+                    const param = {
+                        Bucket: 'music2023',
+                        Key: `song/full/${uuid()}.${fullAudioPieces[fullAudioPieces.length - 1]}`,
+                        Body: fullAudio.buffer
+                    }
+
+                    const uploadedFullAudio = await s3.upload(param).promise()
+                    if (uploadedFullAudio.Location) {
+                        body.full_url = uploadedFullAudio.Location
+                    }
+                }
+
 
                 let result = await mongodb.Song.create(body);
                 apiResponse.data = result;
@@ -247,5 +417,7 @@ module.exports = {
     add,
     remove,
     update,
-    removeById
+    removeById,
+    listByUser,
+    getByUser
 }

@@ -116,19 +116,18 @@ const add = async (body) => {
             }
 
             let sale = await mongodb.Sale.find({ customer_id: body.customerId, song_id: body.songId }).lean();
-            const retention = (customer[0]?.balance || 0) - (song[0]?.unit_price || 0) * (song[0]?.duration || 0)
-            if (retention < 0) {
-                apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-                apiResponse.message = "Bạn không đủ tiền để mua bài hát này!";
-                return apiResponse
-            }
-
             if (sale.length) {
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                 apiResponse.message = "Bạn đã mua bài hát này!";
                 return apiResponse
             }
 
+            const retention = (customer[0]?.balance || 0) - (song[0]?.unit_price || 0) * (song[0]?.duration || 0)
+            if (retention < 0) {
+                apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+                apiResponse.message = "Bạn không đủ tiền để mua bài hát này!";
+                return apiResponse
+            }
 
             let result = await mongodb.Sale.create({
                 customer_id: body.customerId,

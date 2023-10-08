@@ -3,5 +3,6 @@ module.exports = [
     { '/category': './routers/categoryController' },
     { '/song': './routers/songController' },
     { '/sale': './routers/saleController' },
-    { '/click': './routers/clickController' }
+    { '/click': './routers/clickController' },
+    { '/author': './routers/authorController' }
 ]

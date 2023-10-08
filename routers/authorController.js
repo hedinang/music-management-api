@@ -1,7 +1,14 @@
 const express = require('express');
+const multer = require('multer')
 const authorService = require('../service/authorService')
 const router = express.Router();
+const storage = multer.memoryStorage()
 
+// const upload = multer({ dest: "upload/" })
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 100000, files: 1 }
+})
 
 router.post('/list', async function (req, res) {
     let result = await authorService.list(req.body);
@@ -13,8 +20,13 @@ router.get('/:authorId', async function (req, res) {
     res.send(result)
 })
 
-router.post('/add', async function (req, res) {
-    let result = await authorService.add(req.body);
+router.post('/add', upload.single('file'), async function (req, res) {
+    let result = await authorService.add(req.body, req.file);
+    res.send(result)
+})
+
+router.put('/update', upload.single('file'), async function (req, res) {
+    let result = await authorService.update(req.body, req.file);
     res.send(result)
 })
 

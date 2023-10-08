@@ -9,9 +9,10 @@ const authorSchema = new Schema({
         type: String,
         required: true,
         index: true,
-        default: () => uuid.v4()
+        default: () => uuidv4()
     },
     name: String,
+    img_url: String,
     status: {
         type: String,
         index: true,

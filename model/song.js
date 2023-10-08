@@ -19,7 +19,8 @@ const songSchema = new Schema({
         default: 0
     },
     image: String,
-    url: String,
+    full_url: String,
+    short_url: String,
     duration: Number,
     status: {
         type: String,
