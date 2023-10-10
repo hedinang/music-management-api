@@ -253,7 +253,6 @@ const getTop = async (body) => {
 
         apiResponse.data = {}
         apiResponse.data.items = result
-        apiResponse.data.total_items = total_items
         apiResponse.status = httpStatus.StatusCodes.OK
         return apiResponse
     } catch (error) {

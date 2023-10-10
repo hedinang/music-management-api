@@ -37,7 +37,17 @@ router.post('/add', upload.fields([
     { name: 'full_url', maxCount: 1 }]), async function (req, res) {
         let result = await songService.add(req.body, req.files.image[0], req.files.short_url[0], req.files.full_url[0]);
         res.send(result)
-    })
+    }
+)
+
+router.put('/update', upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'short_audio', maxCount: 1 },
+    { name: 'full_audio', maxCount: 1 }]), async function (req, res) {
+        let result = await songService.update(req?.body, req?.files?.image && req?.files?.image[0], req?.files?.short_audio && req?.files?.short_audio[0], req?.files?.full_audio &&req?.files?.full_audio[0]);
+        res.send(result)
+    }
+)
 
 router.put('/update', upload.single('file'), async function (req, res) {
     let result = await songService.update(req.body, req.file);

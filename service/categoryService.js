@@ -48,8 +48,8 @@ const getByUser = async (body, userId, categoryId) => {
             image: e?.image,
             unit_price: e?.unit_price,
             duration: e?.duration,
-            short_url: e?.short_url,
-            full_url: e?.full_url,
+            short_audio: e?.short_audio,
+            full_audio: e?.full_audio,
             status: e?.status,
             created_at: e?.created_at,
             category: e?.category

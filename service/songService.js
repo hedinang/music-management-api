@@ -36,8 +36,8 @@ const get = async (songId) => {
                     "image": { $first: '$image' },
                     "unit_price": { $first: '$unit_price' },
                     "duration": { $first: '$duration' },
-                    "full_url": { $first: '$full_url' },
-                    "short_url": { $first: '$short_url' },
+                    "full_audio": { $first: '$full_audio' },
+                    "short_audio": { $first: '$short_audio' },
                     "status": { $first: '$status' },
                     "created_at": { $first: '$created_at' },
                     category: { $push: "$category" }
@@ -83,8 +83,8 @@ const getByUser = async (userId, songId) => {
                     "image": { $first: '$image' },
                     "unit_price": { $first: '$unit_price' },
                     "duration": { $first: '$duration' },
-                    "full_url": { $first: '$full_url' },
-                    "short_url": { $first: '$short_url' },
+                    "full_audio": { $first: '$full_audio' },
+                    "short_audio": { $first: '$short_audio' },
                     "status": { $first: '$status' },
                     "created_at": { $first: '$created_at' },
                     category: { $push: "$category" }
@@ -135,8 +135,8 @@ const list = async (body) => {
                     "image": { $first: '$image' },
                     "unit_price": { $first: '$unit_price' },
                     "duration": { $first: '$duration' },
-                    "full_url": { $first: '$full_url' },
-                    "short_url": { $first: '$short_url' },
+                    "full_audio": { $first: '$full_audio' },
+                    "short_audio": { $first: '$short_audio' },
                     "status": { $first: '$status' },
                     "created_at": { $first: '$created_at' },
                     category: { $push: "$category" }
@@ -191,8 +191,8 @@ const listByUser = async (body, userId) => {
                     "image": { $first: '$image' },
                     "unit_price": { $first: '$unit_price' },
                     "duration": { $first: '$duration' },
-                    "full_url": { $first: '$full_url' },
-                    "short_url": { $first: '$short_url' },
+                    "full_audio": { $first: '$full_audio' },
+                    "short_audio": { $first: '$short_audio' },
                     "status": { $first: '$status' },
                     "created_at": { $first: '$created_at' },
                     category: { $push: "$category" }
@@ -214,8 +214,8 @@ const listByUser = async (body, userId) => {
                 image: e?.image,
                 unit_price: e?.unit_price,
                 duration: e?.duration,
-                short_url: e?.short_url,
-                full_url: e?.full_url,
+                short_audio: e?.short_audio,
+                full_audio: e?.full_audio,
                 status: e?.status,
                 created_at: e?.created_at,
                 category: e?.category
@@ -246,7 +246,7 @@ const listByUser = async (body, userId) => {
 }
 
 
-const add = async (body, img, shortAudio, fullAudio) => {
+const add = async (body, image, shortAudio, fullAudio) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     let apiResponse = {}
@@ -256,14 +256,14 @@ const add = async (body, img, shortAudio, fullAudio) => {
             let song = await mongodb.Song.find({ name: body.name }).lean();
             if (song.length) {
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-                apiResponse.message = "Tên danh mục này đã tồn tại!";
+                apiResponse.message = "Bài hát này đã tồn tại!";
             } else {
-                if (img) {
-                    const imgPieces = img.originalname.split('.')
+                if (image) {
+                    const imgPieces = image.originalname.split('.')
                     const param = {
                         Bucket: 'music2023',
                         Key: `image/song/${uuid()}.${imgPieces[imgPieces.length - 1]}`,
-                        Body: img.buffer
+                        Body: image.buffer
                     }
 
                     const uploadedImg = await s3.upload(param).promise()
@@ -282,7 +282,7 @@ const add = async (body, img, shortAudio, fullAudio) => {
 
                     const uploadedShortAudio = await s3.upload(param).promise()
                     if (uploadedShortAudio.Location) {
-                        body.short_url = uploadedShortAudio.Location
+                        body.short_audio = uploadedShortAudio.Location
                     }
                 }
 
@@ -296,7 +296,7 @@ const add = async (body, img, shortAudio, fullAudio) => {
 
                     const uploadedFullAudio = await s3.upload(param).promise()
                     if (uploadedFullAudio.Location) {
-                        body.full_url = uploadedFullAudio.Location
+                        body.full_audio = uploadedFullAudio.Location
                     }
                 }
 
@@ -315,51 +315,85 @@ const add = async (body, img, shortAudio, fullAudio) => {
     }
 }
 
-const update = async (body, file) => {
+const update = async (body, image, shortAudio, fullAudio) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     let apiResponse = {}
-    const { origin_url, name, ...data } = body
+    const { image_url, short_audio_url, full_audio_url, name, ...data } = body
     if (name === null || name.trim() === '') {
         apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
         apiResponse.message = message.BAD_REQUEST;
         return apiResponse
     }
-
     try {
-        if (body.id) {
-            let song = await mongodb.Song.find({ id: body.id }).lean();
+        if (name) {
+            let song = await mongodb.Song.find({ name: name }).lean();
             if (song.length) {
+                apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+                apiResponse.message = "Bài hát này đã tồn tại!";
 
-
-                let songByName = await mongodb.Song.find({ name: name, id: { $ne: body.id } }).lean();
-                if (songByName.length) {
-                    apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-                    apiResponse.message = "Tên danh mục này đã tồn tại!";
-                    return apiResponse
-                }
-
-                if (origin_url.includes('https://music2023.s3')) {
-                    data.url = origin_url
+            } else {
+                if (image_url.includes('https://music2023.s3')) {
+                    data.image = image_url
                 } else {
-                    if (file) {
+                    if (image) {
+                        const imgPieces = image.originalname.split('.')
                         const param = {
                             Bucket: 'music2023',
-                            Key: `image/song/${uuid()}.${file.mimetype.split('/')[1]}`,
-                            Body: file.buffer
+                            Key: `image/song/${uuid()}.${imgPieces[imgPieces.length - 1]}`,
+                            Body: image.buffer
                         }
 
-                        const uploaded = await s3.upload(param).promise()
-                        data.image = uploaded?.Location
+                        const uploadedImg = await s3.upload(param).promise()
+                        if (uploadedImg.Location) {
+                            data.image = uploadedImg.Location
+                        }
                     }
                 }
 
-                let result = await mongodb.Song.findOneAndUpdate({ id: body.id }, { name: name }, { ...data }, { new: true, session });
-                // apiResponse.data = result;
+                if (short_audio_url.includes('https://music2023.s3')) {
+                    data.short_audio = short_audio_url
+                } else {
+                    if (shortAudio) {
+                        const shortaudioPieces = shortAudio.originalname.split('.')
+                        const param = {
+                            Bucket: 'music2023',
+                            Key: `song/short/${uuid()}.${shortaudioPieces[shortaudioPieces.length - 1]}`,
+                            Body: shortAudio.buffer
+                        }
+
+                        const uploadedShortAudio = await s3.upload(param).promise()
+                        if (uploadedShortAudio.Location) {
+                            data.short_audio = uploadedShortAudio.Location
+                        }
+                    }
+                }
+
+                if (full_audio_url.includes('https://music2023.s3')) {
+                    data.full_audio = full_audio_url
+                } else {
+                    if (fullAudio) {
+                        const fullAudioPieces = fullAudio.originalname.split('.')
+                        const param = {
+                            Bucket: 'music2023',
+                            Key: `song/full/${uuid()}.${fullAudioPieces[fullAudioPieces.length - 1]}`,
+                            Body: fullAudio.buffer
+                        }
+
+                        const uploadedFullAudio = await s3.upload(param).promise()
+                        if (uploadedFullAudio.Location) {
+                            data.fullAudio = uploadedFullAudio.Location
+                        }
+                    }
+                }
+
+                let result = await mongodb.Song.findOneAndUpdate({ id: body.id }, { ...data, name }, { new: true, session });
+                apiResponse.data = result;
                 apiResponse.status = httpStatus.StatusCodes.OK
                 await session.commitTransaction();
             }
         }
+
         return apiResponse
     } catch (e) {
         apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
