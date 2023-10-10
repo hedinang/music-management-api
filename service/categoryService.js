@@ -27,6 +27,48 @@ const get = async (categoryId) => {
     return apiResponse
 }
 
+const getByUser = async (userId, categoryId) => {
+    let apiResponse = {}
+    apiResponse.data = {}
+    apiResponse.data.items = []
+    let result = await mongodb.Song.find({
+        status: { $nin: ['REMOVED'] },
+        category: { $elemMatch: { $eq: categoryId } }
+    }).lean()
+
+
+    for (const e of result) {
+        const item = {
+            id: e?.id,
+            name: e?.name,
+            author: e?.author,
+            image: e?.image,
+            unit_price: e?.unit_price,
+            duration: e?.duration,
+            short_url: e?.short_url,
+            full_url: e?.full_url,
+            status: e?.status,
+            created_at: e?.created_at,
+            category: e?.category
+        }
+        const saleList = await mongodb.Sale.find({
+            customer_id: userId,
+            song_id: e.id,
+            status: { $nin: ['REMOVED'] }
+        }).lean()
+
+        if (saleList.length) {
+            item.buy = true
+        } else {
+            item.buy = false
+        }
+
+        apiResponse.data.items.push(item)
+    }
+    apiResponse.status = httpStatus.StatusCodes.OK
+    return apiResponse
+}
+
 const list = async (body) => {
     let apiResponse = {}
 
@@ -39,7 +81,7 @@ const list = async (body) => {
             status: { $nin: ['REMOVED'] }
         }).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
 
-        const total_items =  await mongodb.Category.count({
+        const total_items = await mongodb.Category.count({
             ...search,
             status: { $nin: ['REMOVED'] }
         });
@@ -203,5 +245,6 @@ module.exports = {
     add,
     remove,
     update,
-    removeById
+    removeById,
+    getByUser
 }

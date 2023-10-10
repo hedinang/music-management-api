@@ -3,6 +3,7 @@ const multer = require('multer')
 const categoryService = require('../service/categoryService')
 const router = express.Router();
 const storage = multer.memoryStorage()
+const authenticateService = require('../service/authenticateService');
 
 // const upload = multer({ dest: "upload/" })
 const upload = multer({
@@ -15,8 +16,14 @@ router.post('/list', async function (req, res) {
     res.send(result)
 })
 
-router.get('/:categoryId', async function (req, res) {
+
+router.get('/admin/:categoryId', async function (req, res) {
     let result = await categoryService.get(req.params.categoryId);
+    res.send(result)
+})
+
+router.get('/:categoryId', authenticateService.authenticate, async function (req, res) {
+    let result = await categoryService.getByUser(req.params.userId, req.params.categoryId);
     res.send(result)
 })
 
