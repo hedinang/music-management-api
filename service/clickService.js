@@ -94,19 +94,19 @@ const list = async (body) => {
     }
 }
 
-const add = async (body) => {
+const add = async (songId, userId) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     let apiResponse = {}
     try {
-        if (body.customerId && body.songId) {
-            let song = await mongodb.Song.find({ id: body.songId }).lean();
+        if (userId && songId) {
+            let song = await mongodb.Song.find({ id: songId }).lean();
             if (!song.length) {
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                 apiResponse.message = "Bài hát này không tồn tại!";
                 return apiResponse
             }
-            let customer = await mongodb.User.find({ id: body.customerId }).lean();
+            let customer = await mongodb.User.find({ id: userId }).lean();
             if (!customer.length) {
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                 apiResponse.message = "Không tồn tại tài khoản này!";
@@ -114,8 +114,8 @@ const add = async (body) => {
             }
 
             let result = await mongodb.Click.create({
-                customer_id: body.customerId,
-                song_id: body.songId
+                customer_id: userId,
+                song_id: songId
             });
 
             await session.commitTransaction();

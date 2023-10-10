@@ -1,6 +1,8 @@
 const express = require('express');
 const clickService = require('../service/clickService')
 const router = express.Router();
+const authenticateService = require('../service/authenticateService');
+
 
 
 router.post('/list', async function (req, res) {
@@ -13,8 +15,8 @@ router.post('/list', async function (req, res) {
 //     res.send(result)
 // })
 
-router.post('/add', async function (req, res) {
-    let result = await clickService.add(req.body);
+router.post('/add', authenticateService.authenticate, async function (req, res) {
+    let result = await clickService.add(req.body.songId, req.params.userId);
     res.send(result)
 })
 
