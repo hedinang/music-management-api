@@ -68,6 +68,12 @@ const getByUser = async (body, userId, categoryId) => {
 
         apiResponse.data.items.push(item)
     }
+
+    const total_items = await mongodb.Song.count({
+        status: { $nin: ['REMOVED'] },
+        category: { $elemMatch: { $eq: categoryId } }
+    });
+    apiResponse.data.total_items = total_items
     apiResponse.status = httpStatus.StatusCodes.OK
     return apiResponse
 }
