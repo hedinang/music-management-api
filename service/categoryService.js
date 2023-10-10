@@ -27,14 +27,17 @@ const get = async (categoryId) => {
     return apiResponse
 }
 
-const getByUser = async (userId, categoryId) => {
+const getByUser = async (body, userId, categoryId) => {
+    if (!body.limit) body.limit = 10
+    if (!body.page) body.page = 0
+    const { limit, page, ...search } = body
     let apiResponse = {}
     apiResponse.data = {}
     apiResponse.data.items = []
     let result = await mongodb.Song.find({
         status: { $nin: ['REMOVED'] },
         category: { $elemMatch: { $eq: categoryId } }
-    }).lean()
+    }).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean()
 
 
     for (const e of result) {

@@ -23,7 +23,7 @@ router.get('/admin/:categoryId', async function (req, res) {
 })
 
 router.get('/:categoryId', authenticateService.authenticate, async function (req, res) {
-    let result = await categoryService.getByUser(req.params.userId, req.params.categoryId);
+    let result = await categoryService.getByUser(req.body, req.params.userId, req.params.categoryId);
     res.send(result)
 })
 

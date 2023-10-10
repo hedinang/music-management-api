@@ -1,6 +1,7 @@
 const express = require('express');
 const saleService = require('../service/saleService')
 const router = express.Router();
+const authenticateService = require('../service/authenticateService');
 
 
 router.post('/list', async function (req, res) {
@@ -13,8 +14,16 @@ router.post('/list', async function (req, res) {
 //     res.send(result)
 // })
 
-router.post('/add', async function (req, res) {
+router.post('/admin/add', async function (req, res) {
     let result = await saleService.add(req.body);
+    res.send(result)
+})
+
+router.post('/add', authenticateService.authenticate, async function (req, res) {
+    let result = await saleService.add({
+        customerId: req?.params?.userId,
+        songId: req?.body?.songId
+    });
     res.send(result)
 })
 
