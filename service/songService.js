@@ -423,16 +423,18 @@ removeById = async (songId) => {
     return apiResponse
 }
 
-remove = async (idList) => {
+const remove = async (idList) => {
     let apiResponse = {}
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        if (!songId) {
-            throw Error("id hasn't existed !")
+        if (!idList.length) {
+            apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+            apiResponse.message = "Have to contain at least 1 id!"
+            return apiResponse
         }
 
-        let result = await mongodb.Song.findOneAndUpdate({ id: { $in: idList } }, { status: 'REMOVED' }, { new: true, session });
+        let result = await mongodb.Song.updateMany({ id: { $in: idList } }, { $set: { status: 'REMOVED' } }, { new: true, session });
         apiResponse.data = result;
         apiResponse.status = httpStatus.StatusCodes.OK
         await session.commitTransaction();
