@@ -327,13 +327,13 @@ const update = async (body, image, shortAudio, fullAudio) => {
     }
     try {
         if (name) {
-            let song = await mongodb.Song.find({ name: name }).lean();
+            let song = await mongodb.Song.find({ name: name, id: { $nin: body.id } }).lean();
             if (song.length) {
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                 apiResponse.message = "Bài hát này đã tồn tại!";
 
             } else {
-                if (image_url.includes('https://music2023.s3')) {
+                if (image_url?.includes('https://music2023.s3')) {
                     data.image = image_url
                 } else {
                     if (image) {
@@ -351,7 +351,7 @@ const update = async (body, image, shortAudio, fullAudio) => {
                     }
                 }
 
-                if (short_audio_url.includes('https://music2023.s3')) {
+                if (short_audio_url?.includes('https://music2023.s3')) {
                     data.short_audio = short_audio_url
                 } else {
                     if (shortAudio) {
@@ -369,7 +369,7 @@ const update = async (body, image, shortAudio, fullAudio) => {
                     }
                 }
 
-                if (full_audio_url.includes('https://music2023.s3')) {
+                if (full_audio_url?.includes('https://music2023.s3')) {
                     data.full_audio = full_audio_url
                 } else {
                     if (fullAudio) {
