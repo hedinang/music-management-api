@@ -1,6 +1,14 @@
 const express = require('express');
 const userService = require('../service/userService')
 const router = express.Router();
+const multer = require('multer')
+const storage = multer.memoryStorage()
+
+const upload = multer({
+    storage: storage,
+    limits: { fieldSize: 100 * 1024 * 1024, files: 3 }
+})
+
 
 router.post('/register', async function (req, res) {
     let result = await userService.register(req.body);
@@ -22,13 +30,20 @@ router.get('/:userId', async function (req, res) {
     res.send(result)
 })
 
-router.post('/add', async function (req, res) {
-    let result = await userService.add(req.body);
+router.post('/add', upload.fields([
+    { name: 'image', maxCount: 1 }]), async function (req, res) {
+        let result = await userService.add(req?.body, req?.files?.image && req?.files?.image[0]);
+        res.send(result)
+    }
+)
+
+router.delete('/:songId', async function (req, res) {
+    let result = await userService.removeById(req.params.userId);
     res.send(result)
 })
 
-router.delete('/:userId', async function (req, res) {
-    let result = await userService.remove(req.params.userId);
+router.post('/delete', async function (req, res) {
+    let result = await userService.remove(req.body);
     res.send(result)
 })
 

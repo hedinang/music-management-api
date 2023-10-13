@@ -4,7 +4,14 @@ const httpStatus = require('http-status-codes');
 const message = require('../config/message');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const uuid = require('uuid').v4
+var AWS = require('aws-sdk');
 
+AWS.config.update({
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_KEY
+});
+const s3 = new AWS.S3();
 
 const login = async (body) => {
     const session = await mongoose.startSession();
@@ -100,7 +107,7 @@ const list = async (body) => {
     }
 }
 
-const add = async (body) => {
+const add = async (body, image) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     let apiResponse = {}
@@ -111,6 +118,20 @@ const add = async (body) => {
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                 apiResponse.message = "Tên đăng nhập này đã tồn tại!";
             } else {
+                if (image) {
+                    const imgPieces = image.originalname.split('.')
+                    const param = {
+                        Bucket: 'music2023',
+                        Key: `image/user/${uuid()}.${imgPieces[imgPieces.length - 1]}`,
+                        Body: image.buffer
+                    }
+
+                    const uploadedImg = await s3.upload(param).promise()
+                    if (uploadedImg.Location) {
+                        body.image = uploadedImg.Location
+                    }
+                }
+
                 const hash = bcrypt.hashSync(body.password, Number(process.env.SALT_ROUNDS));
                 body.password = hash
                 let result = await mongodb.User.create(body);
@@ -126,7 +147,7 @@ const add = async (body) => {
     }
 }
 
-remove = async (userId) => {
+const removeById = async (userId) => {
     let apiResponse = {}
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -179,11 +200,35 @@ const register = async (body) => {
 
     return apiResponse
 }
+const remove = async (idList) => {
+    let apiResponse = {}
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        if (!idList.length) {
+            apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+            apiResponse.message = "Have to contain at least 1 id!"
+            return apiResponse
+        }
+
+        let result = await mongodb.User.updateMany({ id: { $in: idList } }, { $set: { status: 'REMOVED' } }, { new: true, session });
+        apiResponse.data = result;
+        apiResponse.status = httpStatus.StatusCodes.OK
+        await session.commitTransaction();
+    } catch (error) {
+        await session.abortTransaction();
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = message.BAD_REQUEST;
+    }
+    return apiResponse
+}
+
 module.exports = {
     list,
     get,
     add,
     remove,
     login,
-    register
+    register,
+    removeById
 }

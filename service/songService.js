@@ -402,7 +402,7 @@ const update = async (body, image, shortAudio, fullAudio) => {
     }
 }
 
-removeById = async (songId) => {
+const removeById = async (songId) => {
     let apiResponse = {}
     const session = await mongoose.startSession();
     session.startTransaction();
