@@ -39,7 +39,7 @@ const list = async (body) => {
             status: { $nin: ['REMOVED'] }
         }).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
 
-        const total_items =  await mongodb.Author.count({
+        const total_items = await mongodb.Author.count({
             ...search,
             status: { $nin: ['REMOVED'] }
         });
@@ -140,7 +140,7 @@ const update = async (body, file) => {
                     }
                 }
 
-                let result = await mongodb.Author.findOneAndUpdate({ id: body.id }, { name: name }, { ...data }, { new: true, session });
+                let result = await mongodb.Author.findOneAndUpdate({ id: body.id }, { ...data, name }, { new: true, session });
                 // apiResponse.data = result;
                 apiResponse.status = httpStatus.StatusCodes.OK
                 await session.commitTransaction();
@@ -180,11 +180,13 @@ const remove = async (idList) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        if (!authorId) {
-            throw Error("id hasn't existed !")
+        if (!idList.length) {
+            apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+            apiResponse.message = "Have to contain at least 1 id!"
+            return apiResponse
         }
 
-        let result = await mongodb.Author.findOneAndUpdate({ id: { $in: idList } }, { status: 'REMOVED' }, { new: true, session });
+        let result = await mongodb.Author.updateMany({ id: { $in: idList } }, { $set: { status: 'REMOVED' } }, { new: true, session });
         apiResponse.data = result;
         apiResponse.status = httpStatus.StatusCodes.OK
         await session.commitTransaction();

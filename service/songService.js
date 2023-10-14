@@ -42,7 +42,16 @@ const get = async (songId) => {
                     "created_at": { $first: '$created_at' },
                     category: { $push: "$category" }
                 }
-            }
+            },
+            {
+                $lookup: {
+                    from: "author",
+                    localField: "author",
+                    foreignField: "id",
+                    as: "author"
+                }
+            },
+            { $unwind: '$author' }
         ]
     )
     if (result.length) {
@@ -89,7 +98,17 @@ const getByUser = async (userId, songId) => {
                     "created_at": { $first: '$created_at' },
                     category: { $push: "$category" }
                 }
-            }
+            },
+            {
+                $lookup: {
+                    from: "author",
+                    localField: "author",
+                    foreignField: "id",
+                    as: "author"
+                }
+            },
+            { $unwind: '$author' },
+            { $addFields: { author: '$author.name' } }
         ]
     )
     if (result.length) {
@@ -141,7 +160,17 @@ const list = async (body) => {
                     "created_at": { $first: '$created_at' },
                     category: { $push: "$category" }
                 }
-            }
+            },
+            {
+                $lookup: {
+                    from: "author",
+                    localField: "author",
+                    foreignField: "id",
+                    as: "author"
+                }
+            },
+            { $unwind: '$author' },
+            { $addFields: { author: '$author.name' } }
         ])
 
         const total_items = await mongodb.Song.count({
@@ -197,7 +226,17 @@ const listByUser = async (body, userId) => {
                     "created_at": { $first: '$created_at' },
                     category: { $push: "$category" }
                 }
-            }
+            },
+            {
+                $lookup: {
+                    from: "author",
+                    localField: "author",
+                    foreignField: "id",
+                    as: "author"
+                }
+            },
+            { $unwind: '$author' },
+            { $addFields: { author: '$author.name' } }
         ])
 
         const total_items = await mongodb.Song.count({
