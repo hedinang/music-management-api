@@ -63,8 +63,13 @@ const get = async (userId) => {
         id: userId,
         status: { $nin: ['REMOVED'] }
     }).lean();
-    apiResponse.data = result;
-    apiResponse.status = httpStatus.StatusCodes.OK
+    if (result.length) {
+        apiResponse.data = result[0];
+        apiResponse.status = httpStatus.StatusCodes.OK
+    } else {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = "There is not any user like that";
+    }
     return apiResponse
 }
 
@@ -137,6 +142,7 @@ const add = async (body, image) => {
                 let result = await mongodb.User.create(body);
                 apiResponse.data = result;
                 apiResponse.status = httpStatus.StatusCodes.OK
+                apiResponse.message = "Tạo khách hàng thành công"
             }
             return apiResponse
         }
@@ -223,6 +229,62 @@ const remove = async (idList) => {
     return apiResponse
 }
 
+const update = async (body, image) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    let apiResponse = {}
+    const { image_url, short_audio_url, full_audio_url, username, password, change_password, ...data } = body
+    if (username === null || username.trim() === '') {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = message.BAD_REQUEST;
+        return apiResponse
+    }
+    try {
+        if (username) {
+            let user = await mongodb.User.find({ name: username, id: { $nin: body.id } }).lean();
+            if (user.length) {
+                apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+                apiResponse.message = "Tên đăng nhập này đã tồn tại!";
+
+            } else {
+                if (image_url?.includes('https://music2023.s3')) {
+                    data.image = image_url
+                } else {
+                    if (image) {
+                        const imgPieces = image.originalname.split('.')
+                        const param = {
+                            Bucket: 'music2023',
+                            Key: `image/user/${uuid()}.${imgPieces[imgPieces.length - 1]}`,
+                            Body: image.buffer
+                        }
+
+                        const uploadedImg = await s3.upload(param).promise()
+                        if (uploadedImg.Location) {
+                            data.image = uploadedImg.Location
+                        }
+                    }
+                }
+                if (change_password === 'true') {
+                    data.password = password
+                }
+
+                let result = await mongodb.User.findOneAndUpdate({ id: body.id }, { ...data, username }, { new: true, session });
+                apiResponse.data = result;
+                apiResponse.status = httpStatus.StatusCodes.OK
+                apiResponse.message = "Thay đổi thông tin khách hàng thành công"
+                await session.commitTransaction();
+            }
+        }
+
+        return apiResponse
+    } catch (e) {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = message.BAD_REQUEST;
+        return apiResponse
+    }
+}
+
+
 module.exports = {
     list,
     get,
@@ -230,5 +292,6 @@ module.exports = {
     remove,
     login,
     register,
-    removeById
+    removeById,
+    update
 }

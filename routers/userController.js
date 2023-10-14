@@ -30,6 +30,11 @@ router.get('/:userId', async function (req, res) {
     res.send(result)
 })
 
+router.get('/admin/:userId', async function (req, res) {
+    let result = await userService.get(req.params.userId);
+    res.send(result)
+})
+
 router.post('/add', upload.fields([
     { name: 'image', maxCount: 1 }]), async function (req, res) {
         let result = await userService.add(req?.body, req?.files?.image && req?.files?.image[0]);
@@ -44,6 +49,11 @@ router.delete('/:songId', async function (req, res) {
 
 router.post('/delete', async function (req, res) {
     let result = await userService.remove(req.body);
+    res.send(result)
+})
+
+router.put('/update', upload.single('file'), async function (req, res) {
+    let result = await userService.update(req.body, req.file);
     res.send(result)
 })
 

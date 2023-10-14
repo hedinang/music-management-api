@@ -11,11 +11,13 @@ const userSchema = new Schema({
         index: true,
         default: () => uuidv4()
     },
+    image: String,
     name: String,
     email: String,
     username: String,
     password: String,
     balance: Number,
+    phone: String,
     type: String,
     access_token: String,
     status: {
