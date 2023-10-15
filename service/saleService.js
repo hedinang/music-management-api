@@ -58,8 +58,19 @@ const list = async (body) => {
             },
             { $unwind: "$song" },
             {
+                $lookup: {
+                    from: "author",
+                    localField: "song.author",
+                    foreignField: "id",
+                    as: "author"
+                }
+            },
+            { $unwind: '$author' },
+            { $addFields: { author: '$author.name' } },
+            {
                 $project: {
                     "customer.name": 1,
+                    "customer.username": 1,
                     "customer.id": 1,
 
                     "song.id": 1,
@@ -69,12 +80,14 @@ const list = async (body) => {
                     "song.duration": 1,
                     "song.status": 1,
                     "song.created_at": 1,
+                    "author": 1,
 
                     "id": 1,
                     "created_at": 1,
                     "status": 1
                 }
             },
+
             { $limit: limit },
             { $skip: (page - 1) * limit },
             { $sort: { _id: -1 } }
@@ -117,9 +130,13 @@ const add = async (body) => {
 
             let sale = await mongodb.Sale.find({ customer_id: body.customerId, song_id: body.songId }).lean();
             if (sale.length) {
-                apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-                apiResponse.message = "Bạn đã mua bài hát này!";
-                return apiResponse
+                const buyDate = new Date(sale[0]?.created_at)
+                const expiredDate = buyDate.setDate(buyDate.getDate() + process.env.EXPIRED_DAY)
+                if (expiredDate <= new Date()) {
+                    apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+                    apiResponse.message = "Bạn vẫn còn hạn sử dụng bài hát này!";
+                    return apiResponse
+                }
             }
 
             const retention = (customer[0]?.balance || 0) - (song[0]?.unit_price || 0) * (song[0]?.duration || 0)

@@ -69,6 +69,14 @@ const getByUser = async (userId, songId) => {
         apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
         apiResponse.message = 'Bạn chưa mua bài hát này!';
         return apiResponse
+    } else {
+        const buyDate = new Date(sale[0].created_at)
+        const expiredDate = buyDate.setDate(buyDate.getDate() + process.env.EXPIRED_DAY)
+        if (expiredDate <= new Date()) {
+            apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+            apiResponse.message = 'Bạn chưa gia hạn bài hát này!';
+            return apiResponse
+        }
     }
 
     let result = await mongodb.Song.aggregate(
@@ -263,14 +271,19 @@ const listByUser = async (body, userId) => {
                 customer_id: userId,
                 song_id: e.id,
                 status: { $nin: ['REMOVED'] }
-            }).lean()
+            }).sort({ _id: -1 }).lean()
 
+            item.expired = false
             if (saleList.length) {
                 item.buy = true
+                const buyDate = new Date(saleList[0].created_at)
+                const expiredDate = buyDate.setDate(buyDate.getDate() + process.env.EXPIRED_DAY)
+                if (expiredDate <= new Date()) {
+                    item.expired = true
+                }
             } else {
                 item.buy = false
             }
-
             apiResponse.data.items.push(item)
         }
 
