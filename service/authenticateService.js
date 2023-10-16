@@ -5,7 +5,7 @@ const authenticate = (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (authHeader) {
-        const token = authHeader.split(' ')[1];
+        const token = authHeader.split(' ')[1]
         const baseUrl = req.baseUrl
 
         jwt.verify(token, process.env.TOKEN_SECRET, async (err, user) => {
@@ -26,10 +26,13 @@ const authenticate = (req, res, next) => {
                     default:
                         break;
                 }
-                req.params.userId = user.id;
+                req.params.userId = user.id
+                next()
             }
-            next();
-        });
+            else {
+                res.sendStatus(401)
+            }
+        })
     } else {
         res.sendStatus(401);
     }
