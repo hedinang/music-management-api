@@ -186,7 +186,7 @@ const update = async (body, file) => {
             if (sale.length) {
 
 
-                let saleByName = await mongodb.Sale.find({ name: name, id: { $ne: body.id } }).lean();
+                let saleByName = await mongodb.Sale.find({ id: { $ne: body.id } }).lean();
                 if (saleByName.length) {
                     apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                     apiResponse.message = "Tên danh mục này đã tồn tại!";
@@ -208,7 +208,7 @@ const update = async (body, file) => {
                     }
                 }
 
-                let result = await mongodb.Sale.findOneAndUpdate({ id: body.id }, { name: name }, { ...data }, { new: true, session });
+                await mongodb.Sale.findOneAndUpdate({ id: body.id }, { ...data }, { new: true, session });
                 // apiResponse.data = result;
                 apiResponse.status = httpStatus.StatusCodes.OK
                 await session.commitTransaction();

@@ -191,7 +191,7 @@ const update = async (body, file) => {
                     }
                 }
 
-                let result = await mongodb.Category.findOneAndUpdate({ id: body.id }, { name: name }, { ...data }, { new: true, session });
+                await mongodb.Category.findOneAndUpdate({ id: body.id }, { ...data, name }, { new: true, session });
                 // apiResponse.data = result;
                 apiResponse.status = httpStatus.StatusCodes.OK
                 await session.commitTransaction();

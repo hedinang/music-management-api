@@ -57,4 +57,9 @@ router.put('/update', upload.single('file'), async function (req, res) {
     res.send(result)
 })
 
+router.get('/logout', async function (req, res) {
+    let result = await userService.logout(req.body);
+    res.send(result)
+})
+
 module.exports = router

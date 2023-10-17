@@ -8,7 +8,7 @@ const authenticateService = require('../service/authenticateService');
 // const upload = multer({ dest: "upload/" })
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 100000, files: 1 }
+    limits: { fieldSize: 100 * 1024 * 1024, files: 1 }
 })
 
 router.post('/list', async function (req, res) {

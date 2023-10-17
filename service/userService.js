@@ -285,6 +285,34 @@ const update = async (body, image) => {
 }
 
 
+const logout = async (body) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    let apiResponse = {}
+    const token = body?.token?.trim()
+    try {
+        if (token === null || token === '') {
+            apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+            apiResponse.message = 'You must pass token to logout';
+        } else {
+            let user = await mongodb.User.find({ token: token }).lean();
+            if (user.length) {
+                await mongodb.User.findOneAndUpdate({ token: token },  { token: '' }, { new: true, session });
+                apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+                apiResponse.message = 'You logout successfully';
+            } else {
+                apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+                apiResponse.message = 'There is not this account';
+            }
+        }
+        return apiResponse
+    } catch (e) {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = message.BAD_REQUEST;
+        return apiResponse
+    }
+}
+
 module.exports = {
     list,
     get,
@@ -293,5 +321,6 @@ module.exports = {
     login,
     register,
     removeById,
-    update
+    update,
+    logout
 }

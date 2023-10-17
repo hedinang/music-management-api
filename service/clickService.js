@@ -135,58 +135,58 @@ const add = async (songId, userId) => {
     }
 }
 
-const update = async (body, file) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    let apiResponse = {}
-    const { origin_url, name, ...data } = body
-    if (name === null || name.trim() === '') {
-        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-        apiResponse.message = message.BAD_REQUEST;
-        return apiResponse
-    }
+// const update = async (body, file) => {
+//     const session = await mongoose.startSession();
+//     session.startTransaction();
+//     let apiResponse = {}
+//     const { origin_url, name, ...data } = body
+//     if (name === null || name.trim() === '') {
+//         apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+//         apiResponse.message = message.BAD_REQUEST;
+//         return apiResponse
+//     }
 
-    try {
-        if (body.id) {
-            let click = await mongodb.Click.find({ id: body.id }).lean();
-            if (click.length) {
+//     try {
+//         if (body.id) {
+//             let click = await mongodb.Click.find({ id: body.id }).lean();
+//             if (click.length) {
 
 
-                let clickByName = await mongodb.Click.find({ name: name, id: { $ne: body.id } }).lean();
-                if (clickByName.length) {
-                    apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-                    apiResponse.message = "Tên danh mục này đã tồn tại!";
-                    return apiResponse
-                }
+//                 let clickByName = await mongodb.Click.find({ name: name, id: { $ne: body.id } }).lean();
+//                 if (clickByName.length) {
+//                     apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+//                     apiResponse.message = "Tên danh mục này đã tồn tại!";
+//                     return apiResponse
+//                 }
 
-                if (origin_url.includes('https://music2023.s3')) {
-                    data.img_url = origin_url
-                } else {
-                    if (file) {
-                        const param = {
-                            Bucket: 'music2023',
-                            Key: `image/click/${uuid()}.${file.mimetype.split('/')[1]}`,
-                            Body: file.buffer
-                        }
+//                 if (origin_url.includes('https://music2023.s3')) {
+//                     data.img_url = origin_url
+//                 } else {
+//                     if (file) {
+//                         const param = {
+//                             Bucket: 'music2023',
+//                             Key: `image/click/${uuid()}.${file.mimetype.split('/')[1]}`,
+//                             Body: file.buffer
+//                         }
 
-                        const uploaded = await s3.upload(param).promise()
-                        data.img_url = uploaded?.Location
-                    }
-                }
+//                         const uploaded = await s3.upload(param).promise()
+//                         data.img_url = uploaded?.Location
+//                     }
+//                 }
 
-                let result = await mongodb.Click.findOneAndUpdate({ id: body.id }, { name: name }, { ...data }, { new: true, session });
-                // apiResponse.data = result;
-                apiResponse.status = httpStatus.StatusCodes.OK
-                await session.commitTransaction();
-            }
-        }
-        return apiResponse
-    } catch (e) {
-        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-        apiResponse.message = message.BAD_REQUEST;
-        return apiResponse
-    }
-}
+//                 await mongodb.Click.findOneAndUpdate({ id: body.id }, { ...data, name }, { new: true, session });
+//                 // apiResponse.data = result;
+//                 apiResponse.status = httpStatus.StatusCodes.OK
+//                 await session.commitTransaction();
+//             }
+//         }
+//         return apiResponse
+//     } catch (e) {
+//         apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+//         apiResponse.message = message.BAD_REQUEST;
+//         return apiResponse
+//     }
+// }
 
 const removeById = async (clickId) => {
     let apiResponse = {}
@@ -268,7 +268,6 @@ module.exports = {
     get,
     add,
     remove,
-    update,
     removeById,
     getTop
 }
