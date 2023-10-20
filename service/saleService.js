@@ -94,8 +94,8 @@ const list = async (body) => {
         ])
 
 
-        const total_items = await mongodb.User.count({
-            ...search
+        const total_items = await mongodb.Sale.count({
+            ...search, status: { $nin: ['REMOVED'] }
         })
         apiResponse.data = {}
         apiResponse.data.items = result

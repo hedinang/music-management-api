@@ -80,7 +80,7 @@ const list = async (body) => {
 
 
         const total_items = await mongodb.User.count({
-            ...search
+            ...search, status: { $nin: ['REMOVED'] }
         })
         apiResponse.data = {}
         apiResponse.data.items = result
