@@ -498,6 +498,37 @@ const remove = async (idList) => {
     return apiResponse
 }
 
+const enjoy = async (songId, userId) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        if (!songId || !userId) {
+            return false
+        } else {
+            let result = await mongodb.User.find({
+                id: userId,
+                status: { $nin: ['REMOVED'] }
+            }).lean()
+            if (!result.length) {
+                return false
+            }
+            const favoriteList = result[0]?.favorite
+            const index = favoriteList?.indexOf(songId)
+            if (index > -1) {
+                favoriteList.splice(index, 1)
+            } else {
+                favoriteList.push(songId)
+            }
+            await mongodb.User.findOneAndUpdate({ id: userId }, { favorite: favoriteList }, { new: true, session })
+            await session.commitTransaction();
+            return true
+        }
+    } catch (error) {
+        await session.abortTransaction();
+        return false
+    }
+}
+
 module.exports = {
     list,
     get,
@@ -506,5 +537,6 @@ module.exports = {
     update,
     removeById,
     listByUser,
-    getByUser
+    getByUser,
+    enjoy
 }

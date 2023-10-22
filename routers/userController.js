@@ -3,6 +3,8 @@ const userService = require('../service/userService')
 const router = express.Router();
 const multer = require('multer')
 const storage = multer.memoryStorage()
+const httpStatus = require('http-status-codes');
+const message = require('../config/message');
 
 const upload = multer({
     storage: storage,
@@ -16,8 +18,16 @@ router.post('/register', async function (req, res) {
 })
 
 router.post('/login', async function (req, res) {
-    let result = await userService.login(req.body);
-    res.send(result)
+    const apiResponse = {}
+    const result = await userService.login(req.body);
+    if (result) {
+        apiResponse.data = { access_token: result }
+        apiResponse.status = httpStatus.StatusCodes.OK
+    } else {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = message.BAD_REQUEST;
+    }
+    res.send(apiResponse)
 })
 
 router.post('/list', async function (req, res) {

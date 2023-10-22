@@ -20,6 +20,7 @@ const userSchema = new Schema({
     phone: String,
     type: String,
     access_token: String,
+    favorite: [],
     status: {
         type: String,
         index: true,

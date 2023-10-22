@@ -20,38 +20,27 @@ const login = async (body) => {
     try {
         if (body.username && body.password) {
             let userList = await mongodb.User.find({ username: body.username, status: { $nin: ['REMOVED'] } }, { _id: 0, __v: 0 }).lean();
-            if (userList) {
+            if (userList.length) {
                 const user = userList[0]
                 const result = bcrypt.compareSync(body.password, user.password); // true
                 if (result) {
                     const accessToken = jwt.sign({ username: body.username }, process.env.TOKEN_SECRET, { expiresIn: '30d' });
                     await mongodb.User.findOneAndUpdate({ id: user.id }, { access_token: accessToken }, { new: true, session });
-                    apiResponse.data = {
-                        access_token: accessToken
-                    };
-                    apiResponse.status = httpStatus.StatusCodes.OK
                     await session.commitTransaction();
-
+                    return accessToken
                 } else {
-                    apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-                    apiResponse.message = message.BAD_REQUEST;
                     await session.abortTransaction();
+                    return false
                 }
-
             } else {
-                apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-                apiResponse.message = message.BAD_REQUEST;
                 await session.abortTransaction();
+                return false
             }
-
         } else {
-            apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-            apiResponse.message = message.BAD_REQUEST;
             await session.abortTransaction();
+            return false
         }
     } catch (e) {
-        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-        apiResponse.message = message.BAD_REQUEST;
         await session.abortTransaction();
     }
     return apiResponse;
@@ -59,10 +48,34 @@ const login = async (body) => {
 
 const get = async (userId) => {
     let apiResponse = {}
-    let result = await mongodb.User.find({
-        id: userId,
-        status: { $nin: ['REMOVED'] }
-    }).lean();
+    let result = await mongodb.User.aggregate([
+        { $match: { id: userId } },
+        { $unwind: '$favorite' },
+        {
+            $lookup: {
+                from: "song",
+                localField: 'favorite',
+                foreignField: "id",
+                as: "favorite"
+            }
+        },
+        { $unwind: '$favorite' },
+        {
+            $group: {
+                "_id": "$_id",
+                favorite: { $push: "$favorite" },
+                "image": { $first: '$image' },
+                "name": { $first: '$name' },
+                "email": { $first: '$email' },
+                "username": { $first: '$username' },
+                "balance": { $first: '$balance' },
+                "phone": { $first: '$phone' },
+                "type": { $first: 'type' },
+                "status": { $first: '$status' },
+                "id": { $first: '$id' }
+            }
+        }
+    ])
     if (result.length) {
         apiResponse.data = result[0];
         apiResponse.status = httpStatus.StatusCodes.OK
