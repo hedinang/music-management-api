@@ -50,7 +50,6 @@ const get = async (userId) => {
     let apiResponse = {}
     let result = await mongodb.User.aggregate([
         { $match: { id: userId } },
-        { $unwind: '$favorite' },
         {
             $lookup: {
                 from: "song",
@@ -59,22 +58,7 @@ const get = async (userId) => {
                 as: "favorite"
             }
         },
-        { $unwind: '$favorite' },
-        {
-            $group: {
-                "_id": "$_id",
-                favorite: { $push: "$favorite" },
-                "image": { $first: '$image' },
-                "name": { $first: '$name' },
-                "email": { $first: '$email' },
-                "username": { $first: '$username' },
-                "balance": { $first: '$balance' },
-                "phone": { $first: '$phone' },
-                "type": { $first: 'type' },
-                "status": { $first: '$status' },
-                "id": { $first: '$id' }
-            }
-        }
+        { $project: { id: 1, name: 1, favorite: 1, image: 1, email: 1, username: 1, balance: 1, phone: 1 } },
     ])
     if (result.length) {
         apiResponse.data = result[0];
