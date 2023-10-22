@@ -139,7 +139,8 @@ const add = async (body) => {
                 }
             }
 
-            const retention = (customer[0]?.balance || 0) - (song[0]?.unit_price || 0) * (song[0]?.duration || 0)
+            const price = (song[0]?.unit_price || 0) * (song[0]?.duration || 0)
+            const retention = (customer[0]?.balance || 0) - price
             if (retention < 0) {
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                 apiResponse.message = "Bạn không đủ tiền để mua bài hát này!";
@@ -148,7 +149,8 @@ const add = async (body) => {
 
             let result = await mongodb.Sale.create({
                 customer_id: body.customerId,
-                song_id: body.songId
+                song_id: body.songId,
+                price: price
             });
 
             await mongodb.User.findOneAndUpdate({ id: body.customerId }, { balance: retention }, { new: true, session });

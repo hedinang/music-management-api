@@ -498,7 +498,6 @@ const remove = async (idList) => {
     return apiResponse
 }
 
-
 module.exports = {
     list,
     get,

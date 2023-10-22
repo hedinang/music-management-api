@@ -87,7 +87,8 @@ const list = async (body) => {
         const { limit, page, ...search } = body
         let result = await mongodb.Category.find({
             ...search,
-            status: { $nin: ['REMOVED'] }
+            status: { $nin: ['REMOVED'] },
+            
         }).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
 
         const total_items = await mongodb.Category.count({

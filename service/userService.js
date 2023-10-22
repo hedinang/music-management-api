@@ -297,7 +297,7 @@ const logout = async (body) => {
         } else {
             let user = await mongodb.User.find({ token: token }).lean();
             if (user.length) {
-                await mongodb.User.findOneAndUpdate({ token: token },  { token: '' }, { new: true, session });
+                await mongodb.User.findOneAndUpdate({ token: token }, { token: '' }, { new: true, session });
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                 apiResponse.message = 'You logout successfully';
             } else {
@@ -313,6 +313,47 @@ const logout = async (body) => {
     }
 }
 
+const listCustomer = async (body) => {
+    let apiResponse = {}
+
+    try {
+
+        if (!body.limit) body.limit = 10
+        if (!body.page) body.page = 0
+        const { limit, page, ...search } = body
+        let result = await mongodb.User.find({
+            ...search,
+            status: { $nin: ['REMOVED'] },
+            type: 'CLIENT'
+        }).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
+
+        const total_items = await mongodb.User.count({
+            ...search,
+            status: { $nin: ['REMOVED'] },
+            type: 'CLIENT'
+        })
+        apiResponse.data = {}
+        apiResponse.data.items = []
+
+        apiResponse.data.items = result?.map(e => ({
+            id: e?.id,
+            name: e?.name,
+            email: e?.email,
+            username: e?.username,
+            balance: e?.balance,
+            status: e?.status,
+            createdAt: e?.created_at
+        }))
+        apiResponse.data.total_items = total_items
+        apiResponse.status = httpStatus.StatusCodes.OK
+        return apiResponse
+    } catch (error) {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = message.BAD_REQUEST;
+        return apiResponse
+    }
+}
+
 module.exports = {
     list,
     get,
@@ -322,5 +363,6 @@ module.exports = {
     register,
     removeById,
     update,
-    logout
+    logout,
+    listCustomer
 }

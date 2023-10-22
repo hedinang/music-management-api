@@ -12,6 +12,7 @@ const saleSchema = new Schema({
     },
     customer_id: String,
     song_id: String,
+    price: Number,
     status: {
         type: String,
         index: true,

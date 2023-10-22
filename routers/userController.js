@@ -62,4 +62,9 @@ router.get('/logout', async function (req, res) {
     res.send(result)
 })
 
+router.get('/customer-list', async function (req, res) {
+    let result = await userService.listCustomer(req.body);
+    res.send(result)
+})
+
 module.exports = router
