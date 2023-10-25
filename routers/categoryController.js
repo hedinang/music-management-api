@@ -4,6 +4,8 @@ const categoryService = require('../service/categoryService')
 const router = express.Router();
 const storage = multer.memoryStorage()
 const authenticateService = require('../service/authenticateService');
+const httpStatus = require('http-status-codes');
+const message = require('../config/message');
 
 // const upload = multer({ dest: "upload/" })
 const upload = multer({
@@ -18,13 +20,24 @@ router.post('/list', async function (req, res) {
 
 
 router.get('/admin/:categoryId', async function (req, res) {
+    let apiResponse = {}
     let result = await categoryService.get(req.params.categoryId);
-    res.send(result)
+    if (!result) {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = "There is not any categorty like that";
+    } else {
+        apiResponse.data = result
+        apiResponse.status = httpStatus.StatusCodes.OK
+    }
+    res.send(apiResponse)
 })
 
 router.get('/:categoryId', authenticateService.authenticate, async function (req, res) {
-    let result = await categoryService.getByUser(req.body, req.params.userId, req.params.categoryId);
-    res.send(result)
+    let apiResponse = {}
+    let result = await categoryService.getByUser(req.body, req.params.userId, req.params.categoryId)
+    apiResponse.data = result
+    apiResponse.status = httpStatus.StatusCodes.OK
+    res.send(apiResponse)
 })
 
 router.post('/add', upload.single('file'), async function (req, res) {

@@ -14,26 +14,24 @@ AWS.config.update({
 const s3 = new AWS.S3();
 
 const get = async (categoryId) => {
-    let apiResponse = {}
     let result = await mongodb.Category.find({
         id: categoryId,
         status: { $nin: ['REMOVED'] }
-    }).lean();
+    }).lean()
+    
     if (result.length) {
-        apiResponse.data = result[0];
+        return result[0]
+    } else {
+        return false
     }
-
-    apiResponse.status = httpStatus.StatusCodes.OK
-    return apiResponse
 }
 
 const getByUser = async (body, userId, categoryId) => {
     if (!body.limit) body.limit = 10
     if (!body.page) body.page = 0
     const { limit, page, ...search } = body
-    let apiResponse = {}
-    apiResponse.data = {}
-    apiResponse.data.items = []
+    const data = {}
+    data.items = []
     let result = await mongodb.Song.find({
         status: { $nin: ['REMOVED'] },
         category: { $elemMatch: { $eq: categoryId } }
@@ -54,28 +52,32 @@ const getByUser = async (body, userId, categoryId) => {
             created_at: e?.created_at,
             category: e?.category
         }
+
         const saleList = await mongodb.Sale.find({
             customer_id: userId,
             song_id: e.id,
             status: { $nin: ['REMOVED'] }
-        }).lean()
+        }).sort({ _id: -1 }).lean()
 
+        item.expired = false
+        item.buy = false
         if (saleList.length) {
             item.buy = true
-        } else {
-            item.buy = false
+            const buyDate = new Date(saleList[0].created_at)
+            const expiredDate = buyDate.setDate(buyDate.getDate() + process.env.EXPIRED_DAY)
+            if (expiredDate <= new Date()) {
+                item.expired = true
+            }
         }
-
-        apiResponse.data.items.push(item)
+        data.items.push(item)
     }
 
     const total_items = await mongodb.Song.count({
         status: { $nin: ['REMOVED'] },
         category: { $elemMatch: { $eq: categoryId } }
     });
-    apiResponse.data.total_items = total_items
-    apiResponse.status = httpStatus.StatusCodes.OK
-    return apiResponse
+    data.total_items = total_items
+    return data
 }
 
 const list = async (body) => {
@@ -88,7 +90,7 @@ const list = async (body) => {
         let result = await mongodb.Category.find({
             ...search,
             status: { $nin: ['REMOVED'] },
-            
+
         }).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
 
         const total_items = await mongodb.Category.count({

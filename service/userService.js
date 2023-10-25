@@ -47,8 +47,7 @@ const login = async (body) => {
 }
 
 const get = async (userId) => {
-    let apiResponse = {}
-    let result = await mongodb.User.aggregate([
+    return await mongodb.User.aggregate([
         { $match: { id: userId } },
         {
             $lookup: {
@@ -60,14 +59,6 @@ const get = async (userId) => {
         },
         { $project: { id: 1, name: 1, favorite: 1, image: 1, email: 1, username: 1, balance: 1, phone: 1 } },
     ])
-    if (result.length) {
-        apiResponse.data = result[0];
-        apiResponse.status = httpStatus.StatusCodes.OK
-    } else {
-        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-        apiResponse.message = "There is not any user like that";
-    }
-    return apiResponse
 }
 
 const list = async (body) => {
