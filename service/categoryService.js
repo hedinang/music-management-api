@@ -230,24 +230,16 @@ const removeById = async (categoryId) => {
 }
 
 const remove = async (idList) => {
-    let apiResponse = {}
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        if (!categoryId) {
-            throw Error("id hasn't existed !")
-        }
-
-        let result = await mongodb.Category.findOneAndUpdate({ id: { $in: idList } }, { status: 'REMOVED' }, { new: true, session });
-        apiResponse.data = result;
-        apiResponse.status = httpStatus.StatusCodes.OK
+        await mongodb.Category.findOneAndUpdate({ id: { $in: idList } }, { status: 'REMOVED' }, { new: true, session });
         await session.commitTransaction();
+        return true
     } catch (error) {
         await session.abortTransaction();
-        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-        apiResponse.message = message.BAD_REQUEST;
+        return false
     }
-    return apiResponse
 }
 
 

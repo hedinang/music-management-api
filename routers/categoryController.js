@@ -56,8 +56,15 @@ router.delete('/:categoryId', async function (req, res) {
 })
 
 router.post('/delete', async function (req, res) {
-    let result = await categoryService.remove(req.body);
-    res.send(result)
+    let apiResponse = {}
+    let result = await categoryService.remove(req.body)
+    if (result) {
+        apiResponse.status = httpStatus.StatusCodes.OK
+    } else {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = message.BAD_REQUEST;
+    }
+    res.send(apiResponse)
 })
 
 module.exports = router
