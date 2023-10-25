@@ -63,8 +63,16 @@ router.post('/me', authenticateService.authenticate, async function (req, res) {
 })
 
 router.get('/admin/:userId', async function (req, res) {
+    let apiResponse = {}
     let result = await userService.get(req.params.userId);
-    res.send(result)
+    if (result.length) {
+        apiResponse.data = result[0];
+        apiResponse.status = httpStatus.StatusCodes.OK
+    } else {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = "There is not any user like that";
+    }
+    res.send(apiResponse)
 })
 
 router.post('/add', upload.fields([
