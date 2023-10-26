@@ -115,10 +115,10 @@ const add = async (body) => {
     let apiResponse = {}
     try {
         if (body.customerId && body.songId) {
-            let song = await mongodb.Song.find({ id: body.songId }).lean();
+            let song = await mongodb.Song.find({ id: body.songId, status: { $nin: ['REMOVED'] }}).lean();
             if (!song.length) {
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-                apiResponse.message = "Bài hát này không tồn tại!";
+                apiResponse.message = "Tên bài hát đã tồn tại!";
                 return apiResponse
             }
             let customer = await mongodb.User.find({ id: body.customerId }).lean();
@@ -195,7 +195,7 @@ const update = async (body, file) => {
                     return apiResponse
                 }
 
-                if (origin_url.includes('https://music2023.s3')) {
+                if (origin_url?.includes('https://music2023.s3')) {
                     data.img_url = origin_url
                 } else {
                     if (file) {

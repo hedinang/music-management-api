@@ -305,7 +305,7 @@ const add = async (body, image, shortAudio, fullAudio) => {
     try {
         if (body.name) {
 
-            let song = await mongodb.Song.find({ name: body.name }).lean();
+            let song = await mongodb.Song.find({ name: body.name, status: { $nin: ['REMOVED'] } }).lean();
             if (song.length) {
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                 apiResponse.message = "Bài hát này đã tồn tại!";
@@ -482,7 +482,7 @@ const remove = async (idList) => {
     try {
         if (!idList.length) {
             apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-            apiResponse.message = "Have to contain at least 1 id!"
+            apiResponse.message = "Cung cấp ít nhất một bài hát để xoá!"
             return apiResponse
         }
 

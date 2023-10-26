@@ -106,7 +106,7 @@ const add = async (body, image) => {
     let apiResponse = {}
     try {
         if (body.username && body.password) {
-            let user = await mongodb.User.find({ username: body.username }).lean();
+            let user = await mongodb.User.find({ username: body.username, status: { $nin: ['REMOVED'] } }).lean();
             if (user.length) {
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                 apiResponse.message = "Tên đăng nhập này đã tồn tại!";

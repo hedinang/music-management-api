@@ -18,7 +18,7 @@ const get = async (categoryId) => {
         id: categoryId,
         status: { $nin: ['REMOVED'] }
     }).lean()
-    
+
     if (result.length) {
         return result[0]
     } else {
@@ -123,7 +123,7 @@ const add = async (body, file) => {
     try {
         if (body.name) {
 
-            let category = await mongodb.Category.find({ name: body.name }).lean();
+            let category = await mongodb.Category.find({ name: body.name, status: { $nin: ['REMOVED'] } }).lean();
             if (category.length) {
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
                 apiResponse.message = "Tên danh mục này đã tồn tại!";
@@ -179,7 +179,7 @@ const update = async (body, file) => {
                     return apiResponse
                 }
 
-                if (origin_url.includes('https://music2023.s3')) {
+                if (origin_url?.includes('https://music2023.s3')) {
                     data.img_url = origin_url
                 } else {
                     if (file) {

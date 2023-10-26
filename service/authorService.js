@@ -69,10 +69,10 @@ const add = async (body, file) => {
     try {
         if (body.name) {
 
-            let author = await mongodb.Author.find({ name: body.name }).lean();
+            let author = await mongodb.Author.find({ name: body.name, status: { $nin: ['REMOVED'] } }).lean();
             if (author.length) {
                 apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-                apiResponse.message = "Tên danh mục này đã tồn tại!";
+                apiResponse.message = "Tên tác giả này đã tồn tại!";
             } else {
                 if (file) {
                     const param = {
@@ -125,7 +125,7 @@ const update = async (body, file) => {
                     return apiResponse
                 }
 
-                if (origin_url.includes('https://music2023.s3')) {
+                if (origin_url?.includes('https://music2023.s3')) {
                     data.img_url = origin_url
                 } else {
                     if (file) {
