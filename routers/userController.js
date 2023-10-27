@@ -97,9 +97,17 @@ router.put('/update', upload.single('file'), async function (req, res) {
     res.send(result)
 })
 
-router.get('/logout', async function (req, res) {
-    let result = await userService.logout(req.body);
-    res.send(result)
+router.post('/logout', authenticateService.authenticate, async function (req, res) {
+    let apiResponse = {}
+    let result = await userService.logout(req.params.userId)
+    if (result) {
+        apiResponse.status = httpStatus.StatusCodes.OK
+        apiResponse.message = 'You logout successfully'
+    } else {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = message.BAD_REQUEST
+    }
+    res.send(apiResponse)
 })
 
 router.get('/customer-list', async function (req, res) {
