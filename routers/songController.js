@@ -14,13 +14,30 @@ const upload = multer({
 })
 
 router.post('/list', authenticateService.authenticate, async function (req, res) {
-    let result = await songService.listByUser(req.body, req.params.userId);
-    res.send(result)
+    let apiResponse = {}
+    let result = await songService.listByUser(req.body, req.params.userId)
+    if (result) {
+        apiResponse.status = httpStatus.StatusCodes.OK
+        apiResponse.data = result
+    } else {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = message.BAD_REQUEST;
+    }
+    res.send(apiResponse)
 })
 
 router.post('/admin/list', async function (req, res) {
-    let result = await songService.list(req.body, req.params.userId);
-    res.send(result)
+    let apiResponse = {}
+    let result = await songService.list(req.body, req.params.userId)
+    if (result) {
+        apiResponse.status = httpStatus.StatusCodes.OK
+        apiResponse.data = result
+    } else {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = message.BAD_REQUEST;
+        return apiResponse
+    }
+    res.send(apiResponse)
 })
 
 router.get('/admin/:songId', async function (req, res) {

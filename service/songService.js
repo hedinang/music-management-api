@@ -132,41 +132,53 @@ const getByUser = async (userId, songId) => {
 }
 
 const list = async (body) => {
-    let apiResponse = {}
-
+    const data = {}
     try {
         if (!body.limit) body.limit = 10
         if (!body.page) body.page = 0
-        const { limit, page, ...search } = body
+        const { limit, page, search } = body
+        const cleanSearch = { status: { $nin: ['REMOVED'] } }
+        if (search) {
+            Object.entries(search)?.forEach(([key, value]) => {
+                switch (key) {
+                    case 'name':
+                        if (value !== null && value?.trim() !== '') {
+                            cleanSearch[key] = {
+                                $regex: value?.trim(),
+                                $options: "i"
+                            }
+                        }
+                        break;
+                    case 'author':
+                        if (value !== null && value?.trim() !== '') {
+                            cleanSearch['author.name'] = {
+                                $regex: value?.trim(),
+                                $options: "i"
+                            }
+                        }
+                        break;
+                    case 'unit_price':
+                    case 'duration':
+                        if (value !== null && typeof (value) === 'number' && value !== 0) {
+                            cleanSearch[key] = value
+                        }
+                        break
+                    case 'total_price':
+                        break
+                    case 'category':
+                        break
+                    default:
+                        break;
+                }
+            })
+        }
         let result = await mongodb.Song.aggregate([
-            { $match: { status: { $nin: ['REMOVED'] } } },
-            { $limit: limit },
-            { $skip: (page - 1) * limit },
-            { $sort: { _id: - 1 } },
-            { $unwind: "$category" },
             {
                 $lookup: {
                     from: "category",
                     localField: "category",
                     foreignField: "id",
                     as: "category"
-                }
-            },
-            { $unwind: '$category' },
-            {
-                $group: {
-                    "_id": "$_id",
-                    'id': { $first: '$id' },
-                    "name": { $first: '$name' },
-                    "author": { $first: '$author' },
-                    "image": { $first: '$image' },
-                    "unit_price": { $first: '$unit_price' },
-                    "duration": { $first: '$duration' },
-                    "full_audio": { $first: '$full_audio' },
-                    "short_audio": { $first: '$short_audio' },
-                    "status": { $first: '$status' },
-                    "created_at": { $first: '$created_at' },
-                    category: { $push: "$category" }
                 }
             },
             {
@@ -177,123 +189,65 @@ const list = async (body) => {
                     as: "author"
                 }
             },
-            { $unwind: '$author' },
-            { $addFields: { author: '$author.name' } }
+            { $unwind: "$author" },
+            { $match: cleanSearch },
+            { $limit: limit },
+            { $skip: (page - 1) * limit },
+            { $sort: { _id: - 1 } },
         ])
-
-        const total_items = await mongodb.Song.count({
-            ...search,
-            status: { $nin: ['REMOVED'] }
-        });
-        apiResponse.data = {}
-        apiResponse.data.items = result
-        apiResponse.data.total_items = total_items
-        apiResponse.status = httpStatus.StatusCodes.OK
-        return apiResponse
+        const total_items = await mongodb.Song.count(cleanSearch)
+        data.items = result
+        data.total_items = total_items
+        return data
     } catch (error) {
-        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-        apiResponse.message = message.BAD_REQUEST;
-        return apiResponse
+        return false
     }
 }
 
 const listByUser = async (body, userId) => {
-    let apiResponse = {}
-
+    let data = {}
     try {
-        if (!body.limit) body.limit = 10
-        if (!body.page) body.page = 0
-        const { limit, page, ...search } = body
-        let result = await mongodb.Song.aggregate([
-            { $match: { status: { $nin: ['REMOVED'] } } },
-            { $limit: limit },
-            { $skip: (page - 1) * limit },
-            { $sort: { _id: - 1 } },
-            { $unwind: "$category" },
-            {
-                $lookup: {
-                    from: "category",
-                    localField: "category",
-                    foreignField: "id",
-                    as: "category"
+        const result = await list(body)
+        if (result) {
+            data.total_items = result?.total_items
+            data.items = []
+            for (const e of result?.items) {
+                const item = {
+                    id: e?.id,
+                    name: e?.name,
+                    author: e?.author,
+                    image: e?.image,
+                    unit_price: e?.unit_price,
+                    duration: e?.duration,
+                    short_audio: e?.short_audio,
+                    full_audio: e?.full_audio,
+                    status: e?.status,
+                    created_at: e?.created_at,
+                    category: e?.category
                 }
-            },
-            { $unwind: '$category' },
-            {
-                $group: {
-                    "_id": "$_id",
-                    'id': { $first: '$id' },
-                    "name": { $first: '$name' },
-                    "author": { $first: '$author' },
-                    "image": { $first: '$image' },
-                    "unit_price": { $first: '$unit_price' },
-                    "duration": { $first: '$duration' },
-                    "full_audio": { $first: '$full_audio' },
-                    "short_audio": { $first: '$short_audio' },
-                    "status": { $first: '$status' },
-                    "created_at": { $first: '$created_at' },
-                    category: { $push: "$category" }
-                }
-            },
-            {
-                $lookup: {
-                    from: "author",
-                    localField: "author",
-                    foreignField: "id",
-                    as: "author"
-                }
-            },
-            { $unwind: '$author' },
-            { $addFields: { author: '$author.name' } }
-        ])
+                const saleList = await mongodb.Sale.find({
+                    customer_id: userId,
+                    song_id: e.id,
+                    status: { $nin: ['REMOVED'] }
+                }).sort({ _id: -1 }).lean()
 
-        const total_items = await mongodb.Song.count({
-            ...search,
-            status: { $nin: ['REMOVED'] }
-        });
-        apiResponse.data = {}
-        apiResponse.data.items = []
-        for (const e of result) {
-            const item = {
-                id: e?.id,
-                name: e?.name,
-                author: e?.author,
-                image: e?.image,
-                unit_price: e?.unit_price,
-                duration: e?.duration,
-                short_audio: e?.short_audio,
-                full_audio: e?.full_audio,
-                status: e?.status,
-                created_at: e?.created_at,
-                category: e?.category
-            }
-            const saleList = await mongodb.Sale.find({
-                customer_id: userId,
-                song_id: e.id,
-                status: { $nin: ['REMOVED'] }
-            }).sort({ _id: -1 }).lean()
-
-            item.expired = false
-            if (saleList.length) {
-                item.buy = true
-                const buyDate = new Date(saleList[0].created_at)
-                const expiredDate = buyDate.setDate(buyDate.getDate() + process.env.EXPIRED_DAY)
-                if (expiredDate <= new Date()) {
-                    item.expired = true
+                item.expired = false
+                if (saleList.length) {
+                    item.buy = true
+                    const buyDate = new Date(saleList[0].created_at)
+                    const expiredDate = buyDate.setDate(buyDate.getDate() + process.env.EXPIRED_DAY)
+                    if (expiredDate <= new Date()) {
+                        item.expired = true
+                    }
+                } else {
+                    item.buy = false
                 }
-            } else {
-                item.buy = false
+                data.items.push(item)
             }
-            apiResponse.data.items.push(item)
         }
-
-        apiResponse.data.total_items = total_items
-        apiResponse.status = httpStatus.StatusCodes.OK
-        return apiResponse
+        return data
     } catch (error) {
-        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-        apiResponse.message = message.BAD_REQUEST;
-        return apiResponse
+        return false
     }
 }
 
