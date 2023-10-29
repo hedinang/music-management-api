@@ -166,6 +166,16 @@ const list = async (body) => {
                     case 'total_price':
                         break
                     case 'category':
+                        if (value !== null && value?.trim() !== '') {
+                            cleanSearch['category'] = {
+                                $elemMatch: {
+                                    "name": {
+                                        $regex: value?.trim(),
+                                        $options: "i"
+                                    }
+                                }
+                            }
+                        }
                         break
                     default:
                         break;
