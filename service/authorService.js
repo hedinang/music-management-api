@@ -33,16 +33,27 @@ const list = async (body) => {
     try {
         if (!body.limit) body.limit = 10
         if (!body.page) body.page = 0
-        const { limit, page, ...search } = body
-        let result = await mongodb.Author.find({
-            ...search,
-            status: { $nin: ['REMOVED'] }
-        }).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
+        const { limit, page, search } = body
+        const cleanSearch = { status: { $nin: ['REMOVED'] } }
+        if (search) {
+            Object.entries(search)?.forEach(([key, value]) => {
+                switch (key) {
+                    case 'name':
+                        if (value !== null && value?.trim() !== '') {
+                            cleanSearch[key] = {
+                                $regex: value?.trim(),
+                                $options: "i"
+                            }
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            })
+        }
+        let result = await mongodb.Author.find(cleanSearch).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
 
-        const total_items = await mongodb.Author.count({
-            ...search,
-            status: { $nin: ['REMOVED'] }
-        });
+        const total_items = await mongodb.Author.count(cleanSearch)
 
         apiResponse.data = {}
         apiResponse.data.items = result?.map(e => ({
