@@ -476,7 +476,7 @@ const enjoy = async (songId, userId) => {
             if (!result.length) {
                 return false
             }
-            const favoriteList = result[0]?.favorite
+            const favoriteList = result[0]?.favorite || []
             const index = favoriteList?.indexOf(songId)
             if (index > -1) {
                 favoriteList.splice(index, 1)
