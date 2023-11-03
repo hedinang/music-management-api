@@ -32,11 +32,26 @@ const getByUser = async (body, userId, categoryId) => {
     const { limit, page, ...search } = body
     const data = {}
     data.items = []
-    let result = await mongodb.Song.find({
-        status: { $nin: ['REMOVED'] },
-        category: { $elemMatch: { $eq: categoryId } }
-    }).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean()
-
+    let result = await mongodb.Song.aggregate([
+        {
+            $match: {
+                status: { $nin: ['REMOVED'] },
+                category: { $elemMatch: { $eq: categoryId } }
+            }
+        },
+        {
+            $lookup: {
+                from: "author",
+                localField: "author",
+                foreignField: "id",
+                as: "author"
+            }
+        },
+        { $unwind: "$author" },
+        { $limit: limit },
+        { $skip: (page - 1) * limit },
+        { $sort: { _id: -1 } }
+    ])
 
     for (const e of result) {
         const item = {

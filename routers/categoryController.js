@@ -18,7 +18,6 @@ router.post('/list', async function (req, res) {
     res.send(result)
 })
 
-
 router.get('/admin/:categoryId', async function (req, res) {
     let apiResponse = {}
     let result = await categoryService.get(req.params.categoryId);
