@@ -216,11 +216,12 @@ const update = async (body, file) => {
 
                         const uploaded = await s3.upload(param).promise()
                         data.img_url = uploaded?.Location
+                    } else {
+                        data.img_url = null
                     }
                 }
 
                 await mongodb.Category.findOneAndUpdate({ id: body.id }, { ...data, name }, { new: true, session });
-                // apiResponse.data = result;
                 apiResponse.status = httpStatus.StatusCodes.OK
                 await session.commitTransaction();
             }

@@ -148,11 +148,12 @@ const update = async (body, file) => {
 
                         const uploaded = await s3.upload(param).promise()
                         data.img_url = uploaded?.Location
+                    } else {
+                        data.img_url = null
                     }
                 }
 
-                let result = await mongodb.Author.findOneAndUpdate({ id: body.id }, { ...data, name }, { new: true, session });
-                // apiResponse.data = result;
+                await mongodb.Author.findOneAndUpdate({ id: body.id }, { ...data, name }, { new: true, session });
                 apiResponse.status = httpStatus.StatusCodes.OK
                 await session.commitTransaction();
             }

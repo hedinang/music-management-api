@@ -364,6 +364,8 @@ const update = async (body, image, shortAudio, fullAudio) => {
                         if (uploadedImg.Location) {
                             data.image = uploadedImg.Location
                         }
+                    } else {
+                        data.image = null
                     }
                 }
 

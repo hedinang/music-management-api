@@ -250,10 +250,13 @@ const update = async (body, image) => {
                         if (uploadedImg.Location) {
                             data.image = uploadedImg.Location
                         }
+                    } else {
+                        data.image = null
                     }
                 }
-                if (change_password === 'true') {
-                    data.password = password
+                if (change_password === 'true' && password) {
+                    const hash = bcrypt.hashSync(password, Number(process.env.SALT_ROUNDS));
+                    data.password = hash
                 }
 
                 let result = await mongodb.User.findOneAndUpdate({ id: body.id }, { ...data, username }, { new: true, session });
