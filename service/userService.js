@@ -296,18 +296,34 @@ const listCustomer = async (body) => {
 
         if (!body.limit) body.limit = 10
         if (!body.page) body.page = 0
-        const { limit, page, ...search } = body
-        let result = await mongodb.User.find({
-            ...search,
-            status: { $nin: ['REMOVED'] },
-            type: 'CLIENT'
-        }).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
+        const { limit, page, search } = body
+        const cleanSearch = { status: { $nin: ['REMOVED'] }, type: 'CLIENT' }
+        if (search) {
+            Object.entries(search)?.forEach(([key, value]) => {
+                switch (key) {
+                    case 'name':
+                    case 'username':
+                    case 'email':
+                        if (value !== null && value?.trim() !== '') {
+                            cleanSearch[key] = {
+                                $regex: value?.trim(),
+                                $options: "i"
+                            }
+                        }
+                        break;
+                    case 'balance':
+                        if (value !== null && typeof (value) === 'number' && value !== 0) {
+                            cleanSearch[key] = value
+                        }
+                        break
+                    default:
+                        break;
+                }
+            })
+        }
+        let result = await mongodb.User.find(cleanSearch).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
 
-        const total_items = await mongodb.User.count({
-            ...search,
-            status: { $nin: ['REMOVED'] },
-            type: 'CLIENT'
-        })
+        const total_items = await mongodb.User.count(cleanSearch)
         apiResponse.data = {}
         apiResponse.data.items = []
 

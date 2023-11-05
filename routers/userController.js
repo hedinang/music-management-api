@@ -110,7 +110,7 @@ router.post('/logout', authenticateService.authenticate, async function (req, re
     res.send(apiResponse)
 })
 
-router.get('/customer-list', async function (req, res) {
+router.post('/customer-list', async function (req, res) {
     let result = await userService.listCustomer(req.body);
     res.send(result)
 })
