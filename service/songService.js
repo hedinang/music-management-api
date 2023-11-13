@@ -4,6 +4,8 @@ const httpStatus = require('http-status-codes');
 const message = require('../config/message');
 var AWS = require('aws-sdk');
 const clickService = require('../service/clickService')
+const userService = require('../service/userService')
+
 const uuid = require('uuid').v4
 
 AWS.config.update({
@@ -219,6 +221,12 @@ const listByUser = async (body, userId) => {
     try {
         const result = await list(body)
         if (result) {
+            let user = await userService.get(userId);
+            if (!user.length) {
+                return
+            }
+            let favoriteIdList = user[0]?.favorite?.map(e => e.id)
+
             data.total_items = result?.total_items
             data.items = []
             for (const e of result?.items) {
@@ -233,7 +241,8 @@ const listByUser = async (body, userId) => {
                     full_audio: e?.full_audio,
                     status: e?.status,
                     created_at: e?.created_at,
-                    category: e?.category
+                    category: e?.category,
+                    favorite: favoriteIdList.includes(e?.id)
                 }
                 const saleList = await mongodb.Sale.find({
                     customer_id: userId,
