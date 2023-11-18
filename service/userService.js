@@ -57,48 +57,48 @@ const get = async (userId) => {
                 as: "favorite"
             }
         },
-        { $project: { id: 1, name: 1, favorite: 1, image: 1, email: 1, username: 1, balance: 1, phone: 1 } },
+        { $project: { id: 1, name: 1, favorite: 1, image: 1, email: 1, username: 1, balance: 1, phone: 1, type: 1 } },
     ])
 }
 
-const list = async (body) => {
-    let apiResponse = {}
+// const list = async (body) => {
+//     let apiResponse = {}
 
-    try {
+//     try {
 
-        if (!body.limit) body.limit = 10
-        if (!body.page) body.page = 0
-        const { limit, page, ...search } = body
-        let result = await mongodb.User.find({
-            ...search,
-            status: { $nin: ['REMOVED'] }
-        }).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
+//         if (!body.limit) body.limit = 10
+//         if (!body.page) body.page = 0
+//         const { limit, page, ...search } = body
+//         let result = await mongodb.User.find({
+//             ...search,
+//             status: { $nin: ['REMOVED'] }
+//         }).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
 
-        const total_items = await mongodb.User.count({
-            ...search,
-            status: { $nin: ['REMOVED'] }
-        })
-        apiResponse.data = {}
-        apiResponse.data.items = []
+//         const total_items = await mongodb.User.count({
+//             ...search,
+//             status: { $nin: ['REMOVED'] }
+//         })
+//         apiResponse.data = {}
+//         apiResponse.data.items = []
 
-        apiResponse.data.items = result?.map(e => ({
-            id: e?.id,
-            name: e?.name,
-            email: e?.email,
-            username: e?.username,
-            balance: e?.balance,
-            status: e?.status,
-            createdAt: e?.created_at
-        }))
-        apiResponse.data.total_items = total_items
-        apiResponse.status = httpStatus.StatusCodes.OK
-        return apiResponse
-    } catch (error) {
-        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-        apiResponse.message = message.BAD_REQUEST;
-        return apiResponse
-    }
-}
+//         apiResponse.data.items = result?.map(e => ({
+//             id: e?.id,
+//             name: e?.name,
+//             email: e?.email,
+//             username: e?.username,
+//             balance: e?.balance,
+//             status: e?.status,
+//             createdAt: e?.created_at
+//         }))
+//         apiResponse.data.total_items = total_items
+//         apiResponse.status = httpStatus.StatusCodes.OK
+//         return apiResponse
+//     } catch (error) {
+//         apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+//         apiResponse.message = message.BAD_REQUEST;
+//         return apiResponse
+//     }
+// }
 
 const add = async (body, image) => {
     const session = await mongoose.startSession();
@@ -346,6 +346,59 @@ const listCustomer = async (body) => {
     }
 }
 
+const list = async (body, clientType) => {
+    let data = {}
+
+    try {
+
+        if (!body.limit) body.limit = 10
+        if (!body.page) body.page = 0
+        const { limit, page, search } = body
+        const cleanSearch = { status: { $nin: ['REMOVED'] }, type: clientType }
+        if (search) {
+            Object.entries(search)?.forEach(([key, value]) => {
+                switch (key) {
+                    case 'name':
+                    case 'username':
+                    case 'email':
+                        if (value !== null && value?.trim() !== '') {
+                            cleanSearch[key] = {
+                                $regex: value?.trim(),
+                                $options: "i"
+                            }
+                        }
+                        break;
+                    case 'balance':
+                        if (value !== null && typeof (value) === 'number' && value !== 0) {
+                            cleanSearch[key] = value
+                        }
+                        break
+                    default:
+                        break;
+                }
+            })
+        }
+        let result = await mongodb.User.find(cleanSearch).limit(limit).skip((page - 1) * limit).sort({ _id: -1 }).lean();
+
+        const total_items = await mongodb.User.count(cleanSearch)
+        data = {}
+        data.items = []
+
+        data.items = result?.map(e => ({
+            id: e?.id,
+            name: e?.name,
+            email: e?.email,
+            username: e?.username,
+            balance: e?.balance,
+            status: e?.status,
+            createdAt: e?.created_at
+        }))
+        data.total_items = total_items
+        return data
+    } catch (error) {
+        return []
+    }
+}
 module.exports = {
     list,
     get,

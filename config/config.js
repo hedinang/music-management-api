@@ -132,5 +132,9 @@ module.exports = {
             'tier': 'Premium',
             'promotion': 0
         }
-    ]
+    ],
+    CLIENT_TYPE: {
+        CLIENT: 'CLIENT',
+        ADMIN: 'ADMIN'
+    }
 };

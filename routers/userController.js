@@ -6,12 +6,12 @@ const storage = multer.memoryStorage()
 const httpStatus = require('http-status-codes');
 const message = require('../config/message');
 const authenticateService = require('../service/authenticateService');
+const { CLIENT_TYPE } = require('../config/config');
 
 const upload = multer({
     storage: storage,
     limits: { fieldSize: 100 * 1024 * 1024, files: 3 }
 })
-
 
 router.post('/register', async function (req, res) {
     let result = await userService.register(req.body);
@@ -111,8 +111,28 @@ router.post('/logout', authenticateService.authenticate, async function (req, re
 })
 
 router.post('/customer-list', async function (req, res) {
-    let result = await userService.listCustomer(req.body);
-    res.send(result)
+    let apiResponse = {}
+    let result = await userService.list(req.body, CLIENT_TYPE.CLIENT);
+    if (result?.items?.length) {
+        apiResponse.data = result
+        apiResponse.status = httpStatus.StatusCodes.OK
+    } else {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = message.BAD_REQUEST;
+    }
+    res.send(apiResponse)
 })
 
+router.post('/admin-list', async function (req, res) {
+    let apiResponse = {}
+    let result = await userService.list(req.body, CLIENT_TYPE.ADMIN);
+    if (result?.items?.length) {
+        apiResponse.data = result
+        apiResponse.status = httpStatus.StatusCodes.OK
+    } else {
+        apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+        apiResponse.message = message.BAD_REQUEST;
+    }
+    res.send(apiResponse)
+})
 module.exports = router
