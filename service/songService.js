@@ -276,61 +276,60 @@ const add = async (body, image, shortAudio, fullAudio) => {
     session.startTransaction();
     let apiResponse = {}
     try {
-        if (body.name) {
+        if (!body.name) return
 
-            let song = await mongodb.Song.find({ name: body.name, status: { $nin: ['REMOVED'] } }).lean();
-            if (song.length) {
-                apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-                apiResponse.message = "Bài hát này đã tồn tại!";
-            } else {
-                if (image) {
-                    const imgPieces = image.originalname.split('.')
-                    const param = {
-                        Bucket: 'music2023',
-                        Key: `image/song/${uuid()}.${imgPieces[imgPieces.length - 1]}`,
-                        Body: image.buffer
-                    }
-
-                    const uploadedImg = await s3.upload(param).promise()
-                    if (uploadedImg.Location) {
-                        body.image = uploadedImg.Location
-                    }
+        let song = await mongodb.Song.find({ name: body.name, status: { $nin: ['REMOVED'] } }).lean();
+        if (song.length) {
+            apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+            apiResponse.message = "Bài hát này đã tồn tại!";
+        } else {
+            if (image) {
+                const imgPieces = image.originalname.split('.')
+                const param = {
+                    Bucket: 'music2023',
+                    Key: `image/song/${uuid()}.${imgPieces[imgPieces.length - 1]}`,
+                    Body: image.buffer
                 }
 
-                if (shortAudio) {
-                    const shortaudioPieces = shortAudio.originalname.split('.')
-                    const param = {
-                        Bucket: 'music2023',
-                        Key: `song/short/${uuid()}.${shortaudioPieces[shortaudioPieces.length - 1]}`,
-                        Body: shortAudio.buffer
-                    }
-
-                    const uploadedShortAudio = await s3.upload(param).promise()
-                    if (uploadedShortAudio.Location) {
-                        body.short_audio = uploadedShortAudio.Location
-                    }
+                const uploadedImg = await s3.upload(param).promise()
+                if (uploadedImg.Location) {
+                    body.image = uploadedImg.Location
                 }
-
-                if (fullAudio) {
-                    const fullAudioPieces = fullAudio.originalname.split('.')
-                    const param = {
-                        Bucket: 'music2023',
-                        Key: `song/full/${uuid()}.${fullAudioPieces[fullAudioPieces.length - 1]}`,
-                        Body: fullAudio.buffer
-                    }
-
-                    const uploadedFullAudio = await s3.upload(param).promise()
-                    if (uploadedFullAudio.Location) {
-                        body.full_audio = uploadedFullAudio.Location
-                    }
-                }
-
-
-                let result = await mongodb.Song.create(body);
-                apiResponse.data = result;
-                apiResponse.status = httpStatus.StatusCodes.OK
             }
+
+            if (shortAudio) {
+                const shortAudioPieces = shortAudio.originalname.split('.')
+                const param = {
+                    Bucket: 'music2023',
+                    Key: `song/short/${uuid()}.${shortAudioPieces[shortAudioPieces.length - 1]}`,
+                    Body: shortAudio.buffer
+                }
+
+                const uploadedShortAudio = await s3.upload(param).promise()
+                if (uploadedShortAudio.Location) {
+                    body.short_audio = uploadedShortAudio.Location
+                }
+            }
+
+            if (fullAudio) {
+                const fullAudioPieces = fullAudio.originalname.split('.')
+                const param = {
+                    Bucket: 'music2023',
+                    Key: `song/full/${uuid()}.${fullAudioPieces[fullAudioPieces.length - 1]}`,
+                    Body: fullAudio.buffer
+                }
+
+                const uploadedFullAudio = await s3.upload(param).promise()
+                if (uploadedFullAudio.Location) {
+                    body.full_audio = uploadedFullAudio.Location
+                }
+            }
+
+            let result = await mongodb.Song.create(body);
+            apiResponse.data = result;
+            apiResponse.status = httpStatus.StatusCodes.OK
         }
+
 
         return apiResponse
     } catch (e) {
@@ -351,75 +350,83 @@ const update = async (body, image, shortAudio, fullAudio) => {
         return apiResponse
     }
     try {
-        if (name) {
-            let song = await mongodb.Song.find({ name: name, id: { $nin: body.id } }).lean();
-            if (song.length) {
-                apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
-                apiResponse.message = "Bài hát này đã tồn tại!";
+        if (!name) {
+            apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+            apiResponse.message = "Bạn phải truyền tên bài hát!";
+            return
+        }
 
+        let song = await mongodb.Song.find({ name: name, id: { $nin: [body.id] }, status: { $nin: ['REMOVED'] } }).lean();
+        
+        if (song.length) {
+            apiResponse.status = httpStatus.StatusCodes.BAD_REQUEST
+            apiResponse.message = "Bài hát này đã tồn tại!";
+            return
+
+        }
+
+        if (image_url?.includes('https://music2023.s3')) {
+            data.image = image_url
+        } else {
+            if (image) {
+                const imgPieces = image.originalname.split('.')
+                const param = {
+                    Bucket: 'music2023',
+                    Key: `image/song/${uuid()}.${imgPieces[imgPieces.length - 1]}`,
+                    Body: image.buffer
+                }
+
+                const uploadedImg = await s3.upload(param).promise()
+                if (uploadedImg.Location) {
+                    data.image = uploadedImg.Location
+                }
             } else {
-                if (image_url?.includes('https://music2023.s3')) {
-                    data.image = image_url
-                } else {
-                    if (image) {
-                        const imgPieces = image.originalname.split('.')
-                        const param = {
-                            Bucket: 'music2023',
-                            Key: `image/song/${uuid()}.${imgPieces[imgPieces.length - 1]}`,
-                            Body: image.buffer
-                        }
-
-                        const uploadedImg = await s3.upload(param).promise()
-                        if (uploadedImg.Location) {
-                            data.image = uploadedImg.Location
-                        }
-                    } else {
-                        data.image = null
-                    }
-                }
-
-                if (short_audio_url?.includes('https://music2023.s3')) {
-                    data.short_audio = short_audio_url
-                } else {
-                    if (shortAudio) {
-                        const shortaudioPieces = shortAudio.originalname.split('.')
-                        const param = {
-                            Bucket: 'music2023',
-                            Key: `song/short/${uuid()}.${shortaudioPieces[shortaudioPieces.length - 1]}`,
-                            Body: shortAudio.buffer
-                        }
-
-                        const uploadedShortAudio = await s3.upload(param).promise()
-                        if (uploadedShortAudio.Location) {
-                            data.short_audio = uploadedShortAudio.Location
-                        }
-                    }
-                }
-
-                if (full_audio_url?.includes('https://music2023.s3')) {
-                    data.full_audio = full_audio_url
-                } else {
-                    if (fullAudio) {
-                        const fullAudioPieces = fullAudio.originalname.split('.')
-                        const param = {
-                            Bucket: 'music2023',
-                            Key: `song/full/${uuid()}.${fullAudioPieces[fullAudioPieces.length - 1]}`,
-                            Body: fullAudio.buffer
-                        }
-
-                        const uploadedFullAudio = await s3.upload(param).promise()
-                        if (uploadedFullAudio.Location) {
-                            data.fullAudio = uploadedFullAudio.Location
-                        }
-                    }
-                }
-
-                let result = await mongodb.Song.findOneAndUpdate({ id: body.id }, { ...data, name }, { new: true, session });
-                apiResponse.data = result;
-                apiResponse.status = httpStatus.StatusCodes.OK
-                await session.commitTransaction();
+                data.image = null
             }
         }
+
+        if (short_audio_url?.includes('https://music2023.s3')) {
+            data.short_audio = short_audio_url
+        } else {
+            if (shortAudio) {
+                const shortAudioPieces = shortAudio.originalname.split('.')
+                const param = {
+                    Bucket: 'music2023',
+                    Key: `song/short/${uuid()}.${shortAudioPieces[shortAudioPieces.length - 1]}`,
+                    Body: shortAudio.buffer
+                }
+
+                const uploadedShortAudio = await s3.upload(param).promise()
+                if (uploadedShortAudio.Location) {
+                    data.short_audio = uploadedShortAudio.Location
+                }
+            }
+        }
+
+        if (full_audio_url?.includes('https://music2023.s3')) {
+            data.full_audio = full_audio_url
+        } else {
+            if (fullAudio) {
+                const fullAudioPieces = fullAudio.originalname.split('.')
+                const param = {
+                    Bucket: 'music2023',
+                    Key: `song/full/${uuid()}.${fullAudioPieces[fullAudioPieces.length - 1]}`,
+                    Body: fullAudio.buffer
+                }
+
+                const uploadedFullAudio = await s3.upload(param).promise()
+                if (uploadedFullAudio.Location) {
+                    data.full_audio = uploadedFullAudio.Location
+                }
+            }
+        }
+
+        let result = await mongodb.Song.findOneAndUpdate({ id: body.id }, { ...data, name }, { new: true, session });
+        apiResponse.data = result;
+        apiResponse.status = httpStatus.StatusCodes.OK
+        await session.commitTransaction();
+
+
 
         return apiResponse
     } catch (e) {
