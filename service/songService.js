@@ -302,6 +302,7 @@ const add = async (body, image, shortAudio, fullAudio) => {
                 const param = {
                     Bucket: 'music2023',
                     Key: `song/short/${uuid()}.${shortAudioPieces[shortAudioPieces.length - 1]}`,
+                    ContentType: 'audio/mpeg',
                     Body: shortAudio.buffer
                 }
 
@@ -316,6 +317,7 @@ const add = async (body, image, shortAudio, fullAudio) => {
                 const param = {
                     Bucket: 'music2023',
                     Key: `song/full/${uuid()}.${fullAudioPieces[fullAudioPieces.length - 1]}`,
+                    ContentType: 'audio/mpeg',
                     Body: fullAudio.buffer
                 }
 
@@ -393,6 +395,7 @@ const update = async (body, image, shortAudio, fullAudio) => {
                 const param = {
                     Bucket: 'music2023',
                     Key: `song/short/${uuid()}.${shortAudioPieces[shortAudioPieces.length - 1]}`,
+                    ContentType: 'audio/mpeg',
                     Body: shortAudio.buffer
                 }
 
@@ -411,6 +414,7 @@ const update = async (body, image, shortAudio, fullAudio) => {
                 const param = {
                     Bucket: 'music2023',
                     Key: `song/full/${uuid()}.${fullAudioPieces[fullAudioPieces.length - 1]}`,
+                    ContentType: 'audio/mpeg',
                     Body: fullAudio.buffer
                 }
 
@@ -425,8 +429,6 @@ const update = async (body, image, shortAudio, fullAudio) => {
         apiResponse.data = result;
         apiResponse.status = httpStatus.StatusCodes.OK
         await session.commitTransaction();
-
-
 
         return apiResponse
     } catch (e) {
